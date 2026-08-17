@@ -1,5 +1,15 @@
 # Financial Helper - Group BouvetOne
 
+## MoSCoW
+
+**Must have**
+
+**Should have**
+
+**Could have**
+
+**Won't have**
+
 ## Functionality
 **Add recurring income and expenses with due dates**
 - Subscriptions (overview with all the subscriptions)
