@@ -208,7 +208,7 @@ FakesAssemblies/
 
 # JetBrains Rider
 *.sln.iml
-/.idea
+.idea/
 /.claude
 
 
