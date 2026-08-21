@@ -3,12 +3,26 @@
 ## MoSCoW
 
 **Must have**
+- Add known income (i.e. salary)
+- Add known, reoccuring expenses (i.e. loan down payment, rent)
+- Graph that shows a balance forecast for the month
+- Categories for income types and expenses
 
 **Should have**
+- Your payments the next seven days
+- Upcoming payments 
+- Budget
+- Saving goals
 
 **Could have**
+- Store discount codes
+- Remind users to use cupons before they expire
+- Remindes about common reoccuring deals and discounts
+- Saving goals progress - see how long and how much you have left before you meet your goal.
 
 **Won't have**
+- AI agent
+- Recommendations 
 
 ## Functionality
 **Add recurring income and expenses with due dates**
