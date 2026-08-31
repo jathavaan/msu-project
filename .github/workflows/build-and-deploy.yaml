@@ -11,29 +11,56 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    name: Detect changed services
+    outputs:
+      server: ${{ steps.filter.outputs.server }}
+      client: ${{ steps.filter.outputs.client }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            server:
+              - 'server/**'
+              - 'k8s/server-*.yaml'
+            client:
+              - 'client/**'
+              - 'k8s/client-*.yaml'
+
   build-and-push:
     runs-on: ubuntu-latest
     name: Build and push ${{ matrix.image }} image to ACR
+    needs: changes
     strategy:
       matrix:
         include:
           - image: financeone-server
             context: server/FinanceOne
             dockerfile: server/FinanceOne/FinanceOne.Api/Dockerfile
+            changed: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true' }}
           - image: financeone-client
             context: client
             dockerfile: client/Dockerfile
+            changed: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.client == 'true' }}
     steps:
       - uses: actions/checkout@v4
+        if: matrix.changed == 'true'
 
       - name: Azure Login
         uses: azure/login@v2
+        if: matrix.changed == 'true'
         with:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Docker build and push to ACR
+        if: matrix.changed == 'true'
         run: |
           az acr login --name ${{ secrets.REGISTRY_LOGIN_SERVER }}
           docker build \
@@ -46,13 +73,28 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    name: Redeploy AKS cluster
-    needs: build-and-push
+    name: Deploy ${{ matrix.service }} to AKS
+    needs: [changes, build-and-push]
+    strategy:
+      matrix:
+        include:
+          - service: server
+            deployment: financeone-server-deployment
+            container: financeone-server
+            image: financeone-server
+            changed: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true' }}
+          - service: client
+            deployment: financeone-client-deployment
+            container: financeone-client
+            image: financeone-client
+            changed: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.client == 'true' }}
     steps:
       - uses: actions/checkout@v4
+        if: matrix.changed == 'true'
 
       - name: Azure Login
         uses: azure/login@v2
+        if: matrix.changed == 'true'
         with:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -60,24 +102,23 @@ jobs:
 
       - name: Set AKS context
         uses: azure/aks-set-context@v4
+        if: matrix.changed == 'true'
         with:
           resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
           cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
 
       - name: Apply Kubernetes manifests
+        if: matrix.changed == 'true'
         run: |
-          kubectl apply -f k8s/ -n ${{ secrets.AKS_NAMESPACE }}
-
-      - name: Roll out server image
-        run: |
-          kubectl set image deployment/financeone-server-deployment \
-            financeone-server=${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-server:${{ github.sha }} \
+          kubectl apply \
+            -f k8s/${{ matrix.service }}-deployment.yaml \
+            -f k8s/${{ matrix.service }}-service.yaml \
             -n ${{ secrets.AKS_NAMESPACE }}
-          kubectl rollout status deployment/financeone-server-deployment -n ${{ secrets.AKS_NAMESPACE }}
 
-      - name: Roll out client image
+      - name: Roll out image
+        if: matrix.changed == 'true'
         run: |
-          kubectl set image deployment/financeone-client-deployment \
-            financeone-client=${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-client:${{ github.sha }} \
+          kubectl set image deployment/${{ matrix.deployment }} \
+            ${{ matrix.container }}=${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ matrix.image }}:${{ github.sha }} \
             -n ${{ secrets.AKS_NAMESPACE }}
-          kubectl rollout status deployment/financeone-client-deployment -n ${{ secrets.AKS_NAMESPACE }}
+          kubectl rollout status deployment/${{ matrix.deployment }} -n ${{ secrets.AKS_NAMESPACE }}
