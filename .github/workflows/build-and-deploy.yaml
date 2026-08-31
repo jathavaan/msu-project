@@ -31,8 +31,12 @@ jobs:
       - name: Docker build and push to ACR
         run: |
           az acr login --name ${{ secrets.REGISTRY_LOGIN_SERVER }}
-          docker build -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-api:${{ env.GIT_COMMIT_SHA }} .
+          docker build \
+            -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-api:${{ env.GIT_COMMIT_SHA }} \
+            -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-api:latest \
+            .
           docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-api:${{ env.GIT_COMMIT_SHA }}
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-api:latest
 
   deploy:
     runs-on: ubuntu-latest
