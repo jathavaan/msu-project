@@ -104,7 +104,7 @@ jobs:
         uses: azure/aks-set-context@v4
         if: matrix.changed == 'true'
         with:
-          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
+          resource-group: ${{ secrets.RESOURCE_GROUP }}
           cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
 
       - name: Apply Kubernetes manifests
