@@ -1,0 +1,12 @@
+**/.git
+**/.gitignore
+**/.dockerignore
+**/.vscode
+**/.idea
+**/*.md
+Dockerfile*
+node_modules
+dist
+dist-ssr
+*.local
+npm-debug.log*
