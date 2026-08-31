@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: financeone-client-deployment
+  labels: 
+    app: financeone-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels: 
+      app: financeone-client
+  template:
+    metadata:
+      labels: 
+        app: financeone-client
+    spec:
+      containers:
+        - name: financeone-client
+          image: financeoneacr.azurecr.io/financeone-client:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 50m
+              memory: 256Mi

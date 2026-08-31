@@ -13,7 +13,16 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    name: Build and push API container image to ACR
+    name: Build and push ${{ matrix.image }} image to ACR
+    strategy:
+      matrix:
+        include:
+          - image: financeone-server
+            context: server/FinanceOne
+            dockerfile: server/FinanceOne/FinanceOne.Api/Dockerfile
+          - image: financeone-client
+            context: client
+            dockerfile: client/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -24,19 +33,16 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Set git commit SHA
-        run: |
-          echo "GIT_COMMIT_SHA=${GITHUB_SHA}" >> $GITHUB_ENV
-
       - name: Docker build and push to ACR
         run: |
           az acr login --name ${{ secrets.REGISTRY_LOGIN_SERVER }}
           docker build \
-            -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-api:${{ env.GIT_COMMIT_SHA }} \
-            -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-api:latest \
-            .
-          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-api:${{ env.GIT_COMMIT_SHA }}
-          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-api:latest
+            -f ${{ matrix.dockerfile }} \
+            -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ matrix.image }}:${{ github.sha }} \
+            -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ matrix.image }}:latest \
+            ${{ matrix.context }}
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ matrix.image }}:${{ github.sha }}
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ matrix.image }}:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -52,10 +58,6 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Set git commit SHA
-        run: |
-          echo "GIT_COMMIT_SHA=${GITHUB_SHA}" >> $GITHUB_ENV
-
       - name: Set AKS context
         uses: azure/aks-set-context@v4
         with:
@@ -66,9 +68,16 @@ jobs:
         run: |
           kubectl apply -f k8s/ -n ${{ secrets.AKS_NAMESPACE }}
 
-      - name: Roll out new image
+      - name: Roll out server image
         run: |
-          kubectl set image deployment/${{ secrets.AKS_DEPLOYMENT_NAME }} \
-            ${{ secrets.AKS_CONTAINER_NAME }}=${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-api:${{ env.GIT_COMMIT_SHA }} \
+          kubectl set image deployment/financeone-server-deployment \
+            financeone-server=${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-server:${{ github.sha }} \
             -n ${{ secrets.AKS_NAMESPACE }}
-          kubectl rollout status deployment/${{ secrets.AKS_DEPLOYMENT_NAME }} -n ${{ secrets.AKS_NAMESPACE }}
+          kubectl rollout status deployment/financeone-server-deployment -n ${{ secrets.AKS_NAMESPACE }}
+
+      - name: Roll out client image
+        run: |
+          kubectl set image deployment/financeone-client-deployment \
+            financeone-client=${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-client:${{ github.sha }} \
+            -n ${{ secrets.AKS_NAMESPACE }}
+          kubectl rollout status deployment/financeone-client-deployment -n ${{ secrets.AKS_NAMESPACE }}
