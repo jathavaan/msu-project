@@ -49,18 +49,18 @@ jobs:
             changed: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.client == 'true' }}
     steps:
       - uses: actions/checkout@v4
-        if: matrix.changed == 'true'
+        if: matrix.changed
 
       - name: Azure Login
         uses: azure/login@v2
-        if: matrix.changed == 'true'
+        if: matrix.changed
         with:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Docker build and push to ACR
-        if: matrix.changed == 'true'
+        if: matrix.changed
         run: |
           az acr login --name ${{ secrets.REGISTRY_LOGIN_SERVER }}
           docker build \
@@ -90,11 +90,11 @@ jobs:
             changed: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.client == 'true' }}
     steps:
       - uses: actions/checkout@v4
-        if: matrix.changed == 'true'
+        if: matrix.changed
 
       - name: Azure Login
         uses: azure/login@v2
-        if: matrix.changed == 'true'
+        if: matrix.changed
         with:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -102,13 +102,13 @@ jobs:
 
       - name: Set AKS context
         uses: azure/aks-set-context@v4
-        if: matrix.changed == 'true'
+        if: matrix.changed
         with:
           resource-group: ${{ secrets.RESOURCE_GROUP }}
           cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
 
       - name: Apply Kubernetes manifests
-        if: matrix.changed == 'true'
+        if: matrix.changed
         run: |
           kubectl apply \
             -f k8s/${{ matrix.service }}-deployment.yaml \
@@ -116,7 +116,7 @@ jobs:
             -n ${{ secrets.AKS_NAMESPACE }}
 
       - name: Roll out image
-        if: matrix.changed == 'true'
+        if: matrix.changed
         run: |
           kubectl set image deployment/${{ matrix.deployment }} \
             ${{ matrix.container }}=${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ matrix.image }}:${{ github.sha }} \
