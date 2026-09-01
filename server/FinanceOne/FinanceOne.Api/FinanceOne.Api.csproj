@@ -17,4 +17,15 @@
       </Content>
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Features\BalanceForecast\" />
+      <Folder Include="Features\Budgets\" />
+      <Folder Include="Features\Categories\" />
+      <Folder Include="Features\DiscountCodes\" />
+      <Folder Include="Features\Expenses\" />
+      <Folder Include="Features\Income\" />
+      <Folder Include="Features\SavingGoals\" />
+      <Folder Include="Features\UpcomingPayments\" />
+    </ItemGroup>
+
 </Project>
