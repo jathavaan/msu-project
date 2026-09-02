@@ -2,6 +2,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../../components/Button'
 import { CategoryBadge } from '../categories/CategoryBadge'
 import { formatCurrency, formatRecurrenceDay } from '../../lib/formatters'
+import { CategoryType } from '../../lib/types'
 import type { Income } from './types'
 
 interface IncomeTableProps {
@@ -27,7 +28,7 @@ export function IncomeTable({ incomes, onEdit, onDelete }: IncomeTableProps) {
           <tr key={income.id}>
             <td className="py-3 font-medium text-ink">{income.name}</td>
             <td className="py-3">
-              <CategoryBadge category={{ id: income.categoryId, name: income.categoryName, type: 'Income' }} />
+              <CategoryBadge category={{ id: income.categoryId, name: income.categoryName, type: CategoryType.Income }} />
             </td>
             <td className="py-3 text-ink-muted">{formatRecurrenceDay(income.recurrenceDay)}</td>
             <td className="py-3 text-right font-medium text-positive">+{formatCurrency(income.amount)}</td>

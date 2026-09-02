@@ -5,6 +5,7 @@ import { Button } from '../../components/Button'
 import { ErrorBanner } from '../../components/ErrorBanner'
 import { CategoryPicker } from '../categories/CategoryPicker'
 import { getErrorMessage } from '../../lib/apiBaseQuery'
+import { CategoryType } from '../../lib/types'
 import { useCreateIncomeMutation, useUpdateIncomeMutation } from './api'
 import type { Income } from './types'
 
@@ -53,7 +54,7 @@ export function IncomeForm({ income, onDone }: IncomeFormProps) {
         onChange={(event) => setAmount(event.target.value)}
         required
       />
-      <CategoryPicker type="Income" value={categoryId} onChange={setCategoryId} />
+      <CategoryPicker type={CategoryType.Income} value={categoryId} onChange={setCategoryId} />
       <Input
         label="Recurs on day of month"
         type="number"

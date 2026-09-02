@@ -9,6 +9,7 @@ import { EmptyState } from '../../components/EmptyState'
 import { CategoryBadge } from './CategoryBadge'
 import { CategoryForm } from './CategoryForm'
 import { useDeleteCategoryMutation, useGetCategoriesQuery } from './api'
+import { categoryTypeLabel } from '../../lib/formatters'
 import type { Category } from './types'
 
 export function CategoriesPage() {
@@ -44,7 +45,10 @@ export function CategoriesPage() {
           <ul className="divide-y divide-border">
             {categories?.map((category) => (
               <li key={category.id} className="flex items-center justify-between py-3">
-                <CategoryBadge category={category} />
+                <div className="flex items-center gap-3">
+                  <CategoryBadge category={category} />
+                  <span className="text-xs text-ink-faint">{categoryTypeLabel(category.type)}</span>
+                </div>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="sm" onClick={() => setEditing(category)}>
                     <Pencil size={14} />

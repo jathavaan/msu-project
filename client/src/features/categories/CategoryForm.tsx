@@ -7,11 +7,12 @@ import { ErrorBanner } from '../../components/ErrorBanner'
 import { getErrorMessage } from '../../lib/apiBaseQuery'
 import { useCreateCategoryMutation, useUpdateCategoryMutation } from './api'
 import type { Category } from './types'
-import type { CategoryType } from '../../lib/types'
+import { CategoryType } from '../../lib/types'
 
-const TYPE_OPTIONS: { value: CategoryType; label: string }[] = [
-  { value: 'Income', label: 'Income' },
-  { value: 'Expense', label: 'Expense' },
+// Select values are always strings on the DOM; converted to/from CategoryType at the form boundary.
+const TYPE_OPTIONS = [
+  { value: String(CategoryType.Income), label: 'Income' },
+  { value: String(CategoryType.Expense), label: 'Expense' },
 ]
 
 interface CategoryFormProps {
@@ -22,7 +23,7 @@ interface CategoryFormProps {
 
 export function CategoryForm({ category, onDone }: CategoryFormProps) {
   const [name, setName] = useState(category?.name ?? '')
-  const [type, setType] = useState<CategoryType>(category?.type ?? 'Expense')
+  const [type, setType] = useState(String(category?.type ?? CategoryType.Expense))
   const [createCategory, { isLoading: isCreating, error: createError }] = useCreateCategoryMutation()
   const [updateCategory, { isLoading: isUpdating, error: updateError }] = useUpdateCategoryMutation()
 
@@ -31,11 +32,12 @@ export function CategoryForm({ category, onDone }: CategoryFormProps) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    const body = { name, type: Number(type) as CategoryType }
     try {
       if (category) {
-        await updateCategory({ id: category.id, name, type }).unwrap()
+        await updateCategory({ id: category.id, ...body }).unwrap()
       } else {
-        await createCategory({ name, type }).unwrap()
+        await createCategory(body).unwrap()
       }
       onDone()
     } catch {
@@ -49,7 +51,7 @@ export function CategoryForm({ category, onDone }: CategoryFormProps) {
       <Select
         label="Type"
         value={type}
-        onChange={(event) => setType(event.target.value as CategoryType)}
+        onChange={(event) => setType(event.target.value)}
         options={TYPE_OPTIONS}
       />
       {errorMessage && <ErrorBanner message={errorMessage} />}

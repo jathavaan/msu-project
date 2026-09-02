@@ -1,3 +1,5 @@
+import { CategoryType } from './types'
+
 const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
 export function formatCurrency(amount: number): string {
@@ -18,6 +20,10 @@ export function formatRecurrenceDay(day: number): string {
       ? 'th'
       : (['th', 'st', 'nd', 'rd'][day % 10] ?? 'th')
   return `${day}${suffix} of the month`
+}
+
+export function categoryTypeLabel(type: CategoryType): string {
+  return type === CategoryType.Income ? 'Income' : 'Expense'
 }
 
 export function daysUntil(isoDate: string): number {

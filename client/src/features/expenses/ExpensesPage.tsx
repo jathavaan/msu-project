@@ -11,11 +11,12 @@ import { ExpenseTable } from './ExpenseTable'
 import { ExpenseForm } from './ExpenseForm'
 import { useDeleteExpenseMutation, useGetExpensesQuery } from './api'
 import { useGetCategoriesQuery } from '../categories/api'
+import { CategoryType } from '../../lib/types'
 import type { Expense } from './types'
 
 export function ExpensesPage() {
   const [categoryFilter, setCategoryFilter] = useState('')
-  const { data: expenseCategories } = useGetCategoriesQuery({ type: 'Expense' })
+  const { data: expenseCategories } = useGetCategoriesQuery({ type: CategoryType.Expense })
   const { data: expenses, isLoading, error } = useGetExpensesQuery({ categoryId: categoryFilter || undefined })
   const [deleteExpense] = useDeleteExpenseMutation()
   const [editing, setEditing] = useState<Expense | 'new' | null>(null)

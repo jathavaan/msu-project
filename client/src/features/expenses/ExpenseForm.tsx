@@ -5,6 +5,7 @@ import { Button } from '../../components/Button'
 import { ErrorBanner } from '../../components/ErrorBanner'
 import { CategoryPicker } from '../categories/CategoryPicker'
 import { getErrorMessage } from '../../lib/apiBaseQuery'
+import { CategoryType } from '../../lib/types'
 import { useCreateExpenseMutation, useUpdateExpenseMutation } from './api'
 import type { Expense } from './types'
 
@@ -53,7 +54,7 @@ export function ExpenseForm({ expense, onDone }: ExpenseFormProps) {
         onChange={(event) => setAmount(event.target.value)}
         required
       />
-      <CategoryPicker type="Expense" value={categoryId} onChange={setCategoryId} />
+      <CategoryPicker type={CategoryType.Expense} value={categoryId} onChange={setCategoryId} />
       <Input
         label="Recurs on day of month"
         type="number"

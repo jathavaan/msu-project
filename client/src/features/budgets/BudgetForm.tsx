@@ -5,6 +5,7 @@ import { Button } from '../../components/Button'
 import { ErrorBanner } from '../../components/ErrorBanner'
 import { CategoryPicker } from '../categories/CategoryPicker'
 import { getErrorMessage } from '../../lib/apiBaseQuery'
+import { CategoryType } from '../../lib/types'
 import { useCreateBudgetMutation, useUpdateBudgetMutation } from './api'
 import type { Budget } from './types'
 
@@ -45,7 +46,7 @@ export function BudgetForm({ budget, onDone }: BudgetFormProps) {
           Category: <span className="font-medium text-ink">{budget.categoryName}</span>
         </p>
       ) : (
-        <CategoryPicker type="Expense" value={categoryId} onChange={setCategoryId} />
+        <CategoryPicker type={CategoryType.Expense} value={categoryId} onChange={setCategoryId} />
       )}
       <Input
         label="Monthly limit"
