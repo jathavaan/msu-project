@@ -12,6 +12,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Client", policy =>
+    {
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+    });
+});
+
 builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddDbContext<FinanceOneDbContext>(options =>
@@ -40,6 +49,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
+app.UseCors("Client");
 
 app.MapBudgetsEndpoints();
 app.MapCategoriesEndpoints();
