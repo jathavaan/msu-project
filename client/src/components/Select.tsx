@@ -22,7 +22,7 @@ export function Select({ label, options, error, placeholder, className, id, ...r
       <select
         id={selectId}
         className={clsx(
-          'w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-sidebar-active',
+          'h-10 w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink outline-none focus:ring-2 focus:ring-sidebar-active',
           error ? 'border-negative' : 'border-border',
           className,
         )}

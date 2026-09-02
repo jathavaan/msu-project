@@ -19,7 +19,7 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 
 const SIZE_CLASSES: Record<Size, string> = {
   sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-sm',
+  md: 'h-10 px-4 py-2 text-sm',
 }
 
 export function Button({ variant = 'primary', size = 'md', icon, className, children, ...rest }: ButtonProps) {

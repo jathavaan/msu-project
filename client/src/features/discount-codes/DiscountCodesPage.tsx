@@ -37,7 +37,7 @@ export function DiscountCodesPage() {
         title="Discount Codes"
         description="Store discount codes so you don't forget to use them before they expire."
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex items-end gap-3">
             <Select
               label="Filter by expiry"
               value={expiryFilter}
