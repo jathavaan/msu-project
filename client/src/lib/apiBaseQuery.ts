@@ -1,6 +1,7 @@
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { BaseQueryFn } from '@reduxjs/toolkit/query/react'
 import type { FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query/react'
+import type { SerializedError } from '@reduxjs/toolkit'
 import type { ApiEnvelope } from './types'
 
 export interface ApiError {
@@ -59,4 +60,13 @@ export const apiBaseQuery: BaseQueryFn<string | FetchArgs, unknown, ApiError> = 
   }
 
   return { data: response.data }
+}
+
+/**
+ * RTK Query's generated `error` state is always `ApiError | SerializedError | undefined` (the
+ * latter covers errors thrown outside the base query itself), so every consumer needs to unwrap
+ * both shapes down to a displayable string.
+ */
+export function getErrorMessage(error: ApiError | SerializedError | undefined): string | undefined {
+  return error?.message
 }
