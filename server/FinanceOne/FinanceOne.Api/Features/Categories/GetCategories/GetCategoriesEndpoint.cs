@@ -7,7 +7,7 @@ public static class GetCategoriesEndpoint
         group.MapGet("/", async (CategoryType? type, GetCategoriesHandler handler, CancellationToken ct) =>
         {
             var response = await handler.Handle(new GetCategoriesQuery(type), ct);
-            return Results.Ok(response.Result);
+            return Results.Ok(response);
         });
 
         return group;

@@ -8,7 +8,7 @@ public static class GetBudgetByIdEndpoint
         {
             var response = await handler.Handle(new GetBudgetByIdQuery(id), ct);
             return response.IsSuccess
-                ? Results.Ok(response.Result)
+                ? Results.Ok(response)
                 : Results.Problem(statusCode: response.ErrorCode, detail: response.ErrorMessage);
         });
 

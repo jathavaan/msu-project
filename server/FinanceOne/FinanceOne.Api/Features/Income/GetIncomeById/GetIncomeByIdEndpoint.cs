@@ -8,7 +8,7 @@ public static class GetIncomeByIdEndpoint
         {
             var response = await handler.Handle(new GetIncomeByIdQuery(id), ct);
             return response.IsSuccess
-                ? Results.Ok(response.Result)
+                ? Results.Ok(response)
                 : Results.Problem(statusCode: response.ErrorCode, detail: response.ErrorMessage);
         });
 

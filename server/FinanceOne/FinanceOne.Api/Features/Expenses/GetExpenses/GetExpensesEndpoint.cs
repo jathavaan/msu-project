@@ -7,7 +7,7 @@ public static class GetExpensesEndpoint
         group.MapGet("/", async (Guid? categoryId, GetExpensesHandler handler, CancellationToken ct) =>
         {
             var response = await handler.Handle(new GetExpensesQuery(categoryId), ct);
-            return Results.Ok(response.Result);
+            return Results.Ok(response);
         });
 
         return group;

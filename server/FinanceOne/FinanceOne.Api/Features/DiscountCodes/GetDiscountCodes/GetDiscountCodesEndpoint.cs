@@ -7,7 +7,7 @@ public static class GetDiscountCodesEndpoint
         group.MapGet("/", async (int? expiringWithinDays, GetDiscountCodesHandler handler, CancellationToken ct) =>
         {
             var response = await handler.Handle(new GetDiscountCodesQuery(expiringWithinDays), ct);
-            return Results.Ok(response.Result);
+            return Results.Ok(response);
         });
 
         return group;

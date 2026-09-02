@@ -7,7 +7,7 @@ public static class GetBudgetsEndpoint
         group.MapGet("/", async (GetBudgetsHandler handler, CancellationToken ct) =>
         {
             var response = await handler.Handle(new GetBudgetsQuery(), ct);
-            return Results.Ok(response.Result);
+            return Results.Ok(response);
         });
 
         return group;

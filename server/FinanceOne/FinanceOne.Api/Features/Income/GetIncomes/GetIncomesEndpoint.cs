@@ -7,7 +7,7 @@ public static class GetIncomesEndpoint
         group.MapGet("/", async (GetIncomesHandler handler, CancellationToken ct) =>
         {
             var response = await handler.Handle(new GetIncomesQuery(), ct);
-            return Results.Ok(response.Result);
+            return Results.Ok(response);
         });
 
         return group;

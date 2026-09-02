@@ -7,7 +7,7 @@ public static class GetUpcomingPaymentsEndpoint
         group.MapGet("/", async (int? days, GetUpcomingPaymentsHandler handler, CancellationToken ct) =>
         {
             var response = await handler.Handle(new GetUpcomingPaymentsQuery(days), ct);
-            return Results.Ok(response.Result);
+            return Results.Ok(response);
         });
 
         return group;

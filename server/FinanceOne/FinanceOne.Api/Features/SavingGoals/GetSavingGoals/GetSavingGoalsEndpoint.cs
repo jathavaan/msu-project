@@ -7,7 +7,7 @@ public static class GetSavingGoalsEndpoint
         group.MapGet("/", async (GetSavingGoalsHandler handler, CancellationToken ct) =>
         {
             var response = await handler.Handle(new GetSavingGoalsQuery(), ct);
-            return Results.Ok(response.Result);
+            return Results.Ok(response);
         });
 
         return group;
