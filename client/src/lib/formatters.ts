@@ -1,6 +1,6 @@
 import { CategoryType } from './types'
 
-const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+const currencyFormatter = new Intl.NumberFormat('nb-NO', { style: 'currency', currency: 'NOK' })
 
 export function formatCurrency(amount: number): string {
   return currencyFormatter.format(amount)
