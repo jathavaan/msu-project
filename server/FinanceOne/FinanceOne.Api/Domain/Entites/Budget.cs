@@ -7,5 +7,5 @@ public sealed class Budget
     public required Guid CategoryId { get; init; }
     public Category? Category { get; init; }
 
-    public required decimal MonthlyLimit { get; init; }
+    public required decimal MonthlyLimit { get; set; }
 }
