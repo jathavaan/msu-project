@@ -3,6 +3,7 @@ import { Plus, Target } from 'lucide-react'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/Button'
 import { Modal } from '../../components/Modal'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { QueryState } from '../../components/QueryState'
 import { EmptyState } from '../../components/EmptyState'
 import { SavingGoalCard } from './SavingGoalCard'
@@ -14,11 +15,11 @@ export function SavingGoalsPage() {
   const { data: savingGoals, isLoading, error } = useGetSavingGoalsQuery()
   const [deleteSavingGoal] = useDeleteSavingGoalMutation()
   const [editing, setEditing] = useState<SavingGoal | 'new' | null>(null)
+  const [deleting, setDeleting] = useState<SavingGoal | null>(null)
 
-  function handleDelete(savingGoal: SavingGoal) {
-    if (window.confirm(`Delete "${savingGoal.name}"?`)) {
-      void deleteSavingGoal(savingGoal.id)
-    }
+  function handleConfirmDelete() {
+    if (deleting) void deleteSavingGoal(deleting.id)
+    setDeleting(null)
   }
 
   return (
@@ -47,7 +48,7 @@ export function SavingGoalsPage() {
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {savingGoals?.map((savingGoal) => (
-            <SavingGoalCard key={savingGoal.id} savingGoal={savingGoal} onEdit={setEditing} onDelete={handleDelete} />
+            <SavingGoalCard key={savingGoal.id} savingGoal={savingGoal} onEdit={setEditing} onDelete={setDeleting} />
           ))}
         </div>
       </QueryState>
@@ -57,6 +58,14 @@ export function SavingGoalsPage() {
           <SavingGoalForm savingGoal={editing === 'new' ? undefined : editing} onDone={() => setEditing(null)} />
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete Saving Goal"
+        message={`Delete "${deleting?.name}"?`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleting(null)}
+      />
     </>
   )
 }

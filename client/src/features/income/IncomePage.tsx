@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { Card } from '../../components/Card'
 import { Button } from '../../components/Button'
 import { Modal } from '../../components/Modal'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { QueryState } from '../../components/QueryState'
 import { EmptyState } from '../../components/EmptyState'
 import { IncomeTable } from './IncomeTable'
@@ -15,11 +16,11 @@ export function IncomePage() {
   const { data: incomes, isLoading, error } = useGetIncomesQuery()
   const [deleteIncome] = useDeleteIncomeMutation()
   const [editing, setEditing] = useState<Income | 'new' | null>(null)
+  const [deleting, setDeleting] = useState<Income | null>(null)
 
-  function handleDelete(income: Income) {
-    if (window.confirm(`Delete "${income.name}"?`)) {
-      void deleteIncome(income.id)
-    }
+  function handleConfirmDelete() {
+    if (deleting) void deleteIncome(deleting.id)
+    setDeleting(null)
   }
 
   return (
@@ -47,13 +48,21 @@ export function IncomePage() {
             />
           }
         >
-          <IncomeTable incomes={incomes ?? []} onEdit={setEditing} onDelete={handleDelete} />
+          <IncomeTable incomes={incomes ?? []} onEdit={setEditing} onDelete={setDeleting} />
         </QueryState>
       </Card>
 
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === 'new' ? 'Add Income' : 'Edit Income'}>
         {editing !== null && <IncomeForm income={editing === 'new' ? undefined : editing} onDone={() => setEditing(null)} />}
       </Modal>
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete Income"
+        message={`Delete "${deleting?.name}"?`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleting(null)}
+      />
     </>
   )
 }

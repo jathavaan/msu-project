@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { Card } from '../../components/Card'
 import { Button } from '../../components/Button'
 import { Modal } from '../../components/Modal'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Select } from '../../components/Select'
 import { QueryState } from '../../components/QueryState'
 import { EmptyState } from '../../components/EmptyState'
@@ -20,11 +21,11 @@ export function ExpensesPage() {
   const { data: expenses, isLoading, error } = useGetExpensesQuery({ categoryId: categoryFilter || undefined })
   const [deleteExpense] = useDeleteExpenseMutation()
   const [editing, setEditing] = useState<Expense | 'new' | null>(null)
+  const [deleting, setDeleting] = useState<Expense | null>(null)
 
-  function handleDelete(expense: Expense) {
-    if (window.confirm(`Delete "${expense.name}"?`)) {
-      void deleteExpense(expense.id)
-    }
+  function handleConfirmDelete() {
+    if (deleting) void deleteExpense(deleting.id)
+    setDeleting(null)
   }
 
   return (
@@ -65,13 +66,21 @@ export function ExpensesPage() {
             />
           }
         >
-          <ExpenseTable expenses={expenses ?? []} onEdit={setEditing} onDelete={handleDelete} />
+          <ExpenseTable expenses={expenses ?? []} onEdit={setEditing} onDelete={setDeleting} />
         </QueryState>
       </Card>
 
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === 'new' ? 'Add Expense' : 'Edit Expense'}>
         {editing !== null && <ExpenseForm expense={editing === 'new' ? undefined : editing} onDone={() => setEditing(null)} />}
       </Modal>
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete Expense"
+        message={`Delete "${deleting?.name}"?`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleting(null)}
+      />
     </>
   )
 }

@@ -3,6 +3,7 @@ import { Plus, Wallet } from 'lucide-react'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/Button'
 import { Modal } from '../../components/Modal'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { QueryState } from '../../components/QueryState'
 import { EmptyState } from '../../components/EmptyState'
 import { BudgetCard } from './BudgetCard'
@@ -14,11 +15,11 @@ export function BudgetsPage() {
   const { data: budgets, isLoading, error } = useGetBudgetsQuery()
   const [deleteBudget] = useDeleteBudgetMutation()
   const [editing, setEditing] = useState<Budget | 'new' | null>(null)
+  const [deleting, setDeleting] = useState<Budget | null>(null)
 
-  function handleDelete(budget: Budget) {
-    if (window.confirm(`Delete the budget for "${budget.categoryName}"?`)) {
-      void deleteBudget(budget.id)
-    }
+  function handleConfirmDelete() {
+    if (deleting) void deleteBudget(deleting.id)
+    setDeleting(null)
   }
 
   return (
@@ -47,7 +48,7 @@ export function BudgetsPage() {
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {budgets?.map((budget) => (
-            <BudgetCard key={budget.id} budget={budget} onEdit={setEditing} onDelete={handleDelete} />
+            <BudgetCard key={budget.id} budget={budget} onEdit={setEditing} onDelete={setDeleting} />
           ))}
         </div>
       </QueryState>
@@ -55,6 +56,14 @@ export function BudgetsPage() {
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === 'new' ? 'Add Budget' : 'Edit Budget'}>
         {editing !== null && <BudgetForm budget={editing === 'new' ? undefined : editing} onDone={() => setEditing(null)} />}
       </Modal>
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete Budget"
+        message={`Delete the budget for "${deleting?.categoryName}"?`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleting(null)}
+      />
     </>
   )
 }

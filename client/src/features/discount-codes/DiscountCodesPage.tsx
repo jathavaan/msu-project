@@ -3,6 +3,7 @@ import { Plus, Ticket } from 'lucide-react'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/Button'
 import { Modal } from '../../components/Modal'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { Select } from '../../components/Select'
 import { QueryState } from '../../components/QueryState'
 import { EmptyState } from '../../components/EmptyState'
@@ -24,11 +25,11 @@ export function DiscountCodesPage() {
   })
   const [deleteDiscountCode] = useDeleteDiscountCodeMutation()
   const [editing, setEditing] = useState<DiscountCode | 'new' | null>(null)
+  const [deleting, setDeleting] = useState<DiscountCode | null>(null)
 
-  function handleDelete(discountCode: DiscountCode) {
-    if (window.confirm(`Delete the code for "${discountCode.storeName}"?`)) {
-      void deleteDiscountCode(discountCode.id)
-    }
+  function handleConfirmDelete() {
+    if (deleting) void deleteDiscountCode(deleting.id)
+    setDeleting(null)
   }
 
   return (
@@ -66,7 +67,7 @@ export function DiscountCodesPage() {
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {discountCodes?.map((discountCode) => (
-            <DiscountCodeCard key={discountCode.id} discountCode={discountCode} onEdit={setEditing} onDelete={handleDelete} />
+            <DiscountCodeCard key={discountCode.id} discountCode={discountCode} onEdit={setEditing} onDelete={setDeleting} />
           ))}
         </div>
       </QueryState>
@@ -76,6 +77,14 @@ export function DiscountCodesPage() {
           <DiscountCodeForm discountCode={editing === 'new' ? undefined : editing} onDone={() => setEditing(null)} />
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete Discount Code"
+        message={`Delete the code for "${deleting?.storeName}"?`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleting(null)}
+      />
     </>
   )
 }
