@@ -1,5 +1,9 @@
 # Financial Helper - Group BouvetOne
 
+## Live deployment
+
+- Client: http://172.160.129.254
+
 ## MoSCoW
 
 **Must have**
