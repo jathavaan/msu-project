@@ -11,7 +11,5 @@ Returns income and expenses due within the next N days, for the "next 7 days" an
 
 **Read-only slice**
 - No commands, only this one query — it doesn't own any data itself.
-
-**Open questions**
-- Same cross-slice read question as Balance Forecast: does this go through `IIncomeRepository`/`IExpenseRepository`, or its own read query? Whatever's decided for Balance Forecast should apply here too, since both slices need the same "walk recurring items forward" logic.
-- Should Saving Goal contributions or Discount Code expiries ever show up in this list, or is it strictly income/expenses?
+- Queries `Incomes`/`Expenses` directly through its own repository via `FinanceOneDbContext`, per the cross-slice read convention in `server/FinanceOne/CLAUDE.md` (own repository, no dependency on another slice's repository interface).
+- Strictly income/expenses — Saving Goal contributions and Discount Code expiries do not appear in this list.
