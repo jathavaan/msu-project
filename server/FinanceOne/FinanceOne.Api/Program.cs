@@ -1,5 +1,6 @@
 using FinanceOne.Api.Common;
 using FinanceOne.Api.Features.Budgets;
+using FinanceOne.Api.Features.Categories;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,5 +37,6 @@ app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
 app.MapBudgetsEndpoints();
+app.MapCategoriesEndpoints();
 
 app.Run();

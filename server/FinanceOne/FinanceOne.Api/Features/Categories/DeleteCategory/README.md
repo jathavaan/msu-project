@@ -6,4 +6,4 @@ Removes a category.
 
 **Behavior**
 - Returns 404 Not Found if the category doesn't exist.
-- Open question: what happens to Income/Expense/Budget records that reference this category — block deletion (409 Conflict) if it's in use, or cascade/clear the reference? Needs a decision before implementation.
+- Returns 409 Conflict if the category is still referenced by any Income, Expense, or Budget record — deletion is blocked rather than cascaded.
