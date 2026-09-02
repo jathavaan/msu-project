@@ -25,7 +25,7 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col bg-sidebar px-3 py-5">
+    <aside className="sticky top-0 flex h-screen w-64 shrink-0 self-start flex-col bg-sidebar px-3 py-5">
       <div className="mb-6 flex items-center gap-2 px-2 text-white">
         <CircleDollarSign size={22} className="text-sidebar-active" />
         <span className="text-base font-semibold">FinanceOne</span>
