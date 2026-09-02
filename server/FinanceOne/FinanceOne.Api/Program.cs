@@ -2,6 +2,7 @@ using FinanceOne.Api.Common;
 using FinanceOne.Api.Features.Budgets;
 using FinanceOne.Api.Features.Categories;
 using FinanceOne.Api.Features.DiscountCodes;
+using FinanceOne.Api.Features.Expenses;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,5 +41,6 @@ app.UseHttpsRedirection();
 app.MapBudgetsEndpoints();
 app.MapCategoriesEndpoints();
 app.MapDiscountCodesEndpoints();
+app.MapExpensesEndpoints();
 
 app.Run();
