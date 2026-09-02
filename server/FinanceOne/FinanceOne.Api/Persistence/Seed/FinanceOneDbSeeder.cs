@@ -93,6 +93,7 @@ public static class FinanceOneDbSeeder
             .RuleFor(s => s.Name, f => f.PickRandom(SavingGoalNames))
             .RuleFor(s => s.TargetAmount, f => f.Finance.Amount(1000, 50000))
             .RuleFor(s => s.TargetDate, f => DateOnly.FromDateTime(f.Date.Future(2)))
+            .RuleFor(s => s.CurrentAmount, (f, s) => f.Finance.Amount(0, s.TargetAmount))
             .Generate(10);
 
         var discountCodes = new Faker<DiscountCode>()

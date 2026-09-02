@@ -14,5 +14,8 @@ public sealed class SavingGoalConfiguration : IEntityTypeConfiguration<SavingGoa
 
         builder.Property(s => s.TargetAmount)
             .HasPrecision(18, 2);
+
+        builder.Property(s => s.CurrentAmount)
+            .HasPrecision(18, 2);
     }
 }

@@ -6,6 +6,5 @@ Returns all saving goals with their progress: amount saved so far, amount remain
 
 **Behavior**
 - Returns an empty list if none exist.
-
-**Open question**
-- Where does "amount saved so far" come from — manual contributions logged against the goal, or a computed leftover (income minus expenses minus budgets) allocated to it? This decides whether Saving Goals needs its own "contribution" command or is purely derived from other slices.
+- "Amount saved so far" is `SavingGoal.CurrentAmount`, a plain field manually tracked on the goal (defaults to 0 on create, editable via Update Saving Goal). There's no dedicated "contribution" command yet — updating progress means calling `PUT /api/saving-goals/{id}` with the new `CurrentAmount`.
+- Each goal in the response includes `AmountSaved` (= `CurrentAmount`), `AmountRemaining` (= `TargetAmount - CurrentAmount`), and `DaysRemaining` (days until `TargetDate`, floored at 0 once past due).
