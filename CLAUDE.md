@@ -24,8 +24,9 @@ discovery in `FinanceOne.Api` actually rely on them being followed consistently.
 
 ## Frontend work
 
-No conventions doc yet for `client/` — plain React + TypeScript + Vite, no state management or
-routing library added so far (check `client/package.json` before assuming one).
+**Before touching anything under `client/`, read `client/CLAUDE.md`.** It covers the feature-folder
+structure, Redux Toolkit / RTK Query conventions, and a non-obvious wire-format gotcha
+(`CategoryType` serializes as a number, not a string) that isn't discoverable from the code alone.
 
 ## Local dev
 
