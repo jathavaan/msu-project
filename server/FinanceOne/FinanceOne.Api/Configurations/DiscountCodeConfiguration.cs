@@ -13,5 +13,15 @@ public sealed class DiscountCodeConfiguration : IEntityTypeConfiguration<Discoun
             .IsRequired();
 
         // CodeText and CodeImageUrl are nullable by convention (string?).
+
+        // MySql.EntityFrameworkCore can't read a `date` column back into DateOnly directly
+        // (MySqlDataReader.GetFieldValue<DateOnly> throws InvalidCastException — the reader only
+        // produces DateTime for `date` columns). Route through DateTime explicitly so EF never
+        // asks the reader for a native DateOnly value; the column stays `date`.
+        builder.Property(d => d.ExpiryDate)
+            .HasConversion(
+                d => d.ToDateTime(TimeOnly.MinValue),
+                d => DateOnly.FromDateTime(d))
+            .HasColumnType("date");
     }
 }
