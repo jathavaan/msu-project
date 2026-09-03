@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: financeone-server-migrate
+  labels:
+    app: financeone-server
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: financeone-server
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: financeone-server
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: financeoneacr.azurecr.io/financeone-server:__IMAGE_TAG__
+          args: [ "--migrate" ]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 50m
+              memory: 256Mi

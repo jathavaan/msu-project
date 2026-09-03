@@ -19,6 +19,18 @@ services:
       retries: 10
       start_period: 10s
 
+  migrate:
+    build:
+      context: ./server/FinanceOne
+      dockerfile: FinanceOne.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__MySql: "Server=db;Port=3306;Database=financeone-db;Uid=financeone;Pwd=${MYSQL_PASSWORD};SslMode=None"
+    command: [ "--migrate" ]
+    depends_on:
+      db:
+        condition: service_healthy
+
   server:
     build:
       context: ./server/FinanceOne
@@ -29,8 +41,8 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   client:
     build:

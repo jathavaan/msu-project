@@ -366,7 +366,7 @@ returns a generated id (`Response<Guid>`) or `Response<Unit>` needs no Vm.
 - `Domain/Enums/`
 - `Configurations/` — one `IEntityTypeConfiguration<T>` per entity; relations/constraints/precision live here, not in slices. Applied via `ApplyConfigurationsFromAssembly` in `FinanceOneDbContext`.
 - `Persistence/FinanceOneDbContext.cs` — one `DbSet<T>` per entity; add here when a new entity is introduced.
-- `Persistence/Migrations/` — run `dotnet ef migrations add <Name>` from `FinanceOne.Api/` after changing an entity or its configuration.
+- `Persistence/Migrations/` — run `dotnet ef migrations add <Name>` from `FinanceOne.Api/` after changing an entity or its configuration. Never applied by the running app itself — `dotnet FinanceOne.Api.dll --migrate` (handled early in `Program.cs`, before Kestrel starts) applies pending migrations and exits, using the same image as the app so migrations always match the code they ship with. In AKS this runs as a one-off `k8s/server-migration-job.yaml` Job, applied by the CI/CD workflow before the deployment is rolled. In docker-compose local dev, the `migrate` service runs the same `--migrate` flag once against the `db` container before `server` starts (`depends_on: condition: service_completed_successfully`).
 - `Persistence/Seed/FinanceOneDbSeeder.cs` — dev-only fake data, wired in `Program.cs` behind `IsDevelopment()`.
 
 ## Configuration & secrets

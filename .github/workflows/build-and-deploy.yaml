@@ -91,6 +91,24 @@ jobs:
           resource-group: ${{ secrets.RESOURCE_GROUP }}
           cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
 
+      - name: Run database migrations
+        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
+        run: |
+          kubectl apply -f k8s/server-serviceaccount.yaml -n ${{ secrets.AKS_NAMESPACE }}
+
+          # Job specs are immutable, so drop any previous run before creating this one.
+          kubectl delete job financeone-server-migrate -n ${{ secrets.AKS_NAMESPACE }} --ignore-not-found
+
+          sed "s|__IMAGE_TAG__|${{ github.sha }}|" k8s/server-migration-job.yaml \
+            | kubectl apply -n ${{ secrets.AKS_NAMESPACE }} -f -
+
+          kubectl wait --for=condition=complete --timeout=180s \
+            job/financeone-server-migrate -n ${{ secrets.AKS_NAMESPACE }} || {
+            echo "::error::Migration job did not complete successfully"
+            kubectl logs job/financeone-server-migrate -n ${{ secrets.AKS_NAMESPACE }} --all-containers
+            exit 1
+          }
+
       - name: Deploy server
         if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
         run: |

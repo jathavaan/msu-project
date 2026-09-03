@@ -47,6 +47,19 @@ builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
+// Migration mode: `dotnet FinanceOne.Api.dll --migrate` applies pending migrations and exits,
+// without starting Kestrel or mapping any routes. Same image as the running app, so migrations
+// always match the code they ship with. Run as a one-off k8s Job before each deploy
+// (see k8s/server-migration-job.yaml) rather than from every app pod, to avoid replicas racing
+// to apply the same migration.
+if (args.Contains("--migrate"))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<FinanceOneDbContext>();
+    await db.Database.MigrateAsync();
+    return;
+}
+
 app.MapOpenApi();
 app.UseSwaggerUI(options =>
 {
