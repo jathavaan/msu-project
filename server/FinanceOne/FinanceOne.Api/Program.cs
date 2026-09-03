@@ -8,12 +8,13 @@ using FinanceOne.Api.Features.Income;
 using FinanceOne.Api.Features.SavingGoals;
 using FinanceOne.Api.Features.UpcomingPayments;
 using Microsoft.EntityFrameworkCore;
+using MySql.EntityFrameworkCore.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Outside Development, secrets (e.g. ConnectionStrings:SqlServer) come from Azure Key Vault
+// Outside Development, secrets (e.g. ConnectionStrings:MySql) come from Azure Key Vault
 // instead of appsettings/env vars. Secret names use "--" in place of ":" (e.g. the secret
-// "ConnectionStrings--SqlServer" becomes config key "ConnectionStrings:SqlServer").
+// "ConnectionStrings--MySql" becomes config key "ConnectionStrings:MySql").
 // DefaultAzureCredential resolves via Workload Identity when running in AKS, or the
 // developer's `az login` session when running locally against a non-Development environment.
 if (!builder.Environment.IsDevelopment())
@@ -37,7 +38,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddDbContext<FinanceOneDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("SqlServer")));
+    options.UseMySQL(builder.Configuration.GetConnectionString("MySql")!));
 
 builder.Services.AddFinanceOneServices();
 
