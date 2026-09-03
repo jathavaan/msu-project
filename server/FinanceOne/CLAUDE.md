@@ -371,17 +371,30 @@ returns a generated id (`Response<Guid>`) or `Response<Unit>` needs no Vm.
 
 ## Configuration & secrets
 
-- `Development` (docker-compose, local `dotnet run`): `ConnectionStrings:MySql` comes from an
-  env var (docker-compose) or user-secrets (`UserSecretsId` in the csproj) — no Key Vault call.
+- `Development` (docker-compose, local `dotnet run`): `ConnectionStrings:MySql` is a full
+  username/password connection string from an env var (docker-compose) or user-secrets
+  (`UserSecretsId` in the csproj) — no Key Vault call, no Azure AD.
 - Everywhere else (deployed to AKS, or run locally against a non-Development environment):
-  `Program.cs` adds Azure Key Vault (`financeone-key-vault`, URI in `appsettings.json` ->
-  `KeyVault:Uri`) as a configuration source via `AddAzureKeyVault` + `DefaultAzureCredential`.
-  Secret names use `--` in place of `:` (e.g. secret `ConnectionStrings--MySql` becomes
-  config key `ConnectionStrings:MySql`) — this is the Azure SDK's own convention, not custom
-  mapping code. `DefaultAzureCredential` resolves via AKS Workload Identity in the cluster, or the
-  developer's `az login` session when run locally.
-- Don't add new secrets to `appsettings.json`/`appsettings.Development.json` directly — add them
-  to the Key Vault and read them through `IConfiguration` the same way as `ConnectionStrings:MySql`.
+  `financeone-sqlserver` (the Azure Database for MySQL server) has `aad_auth_only=ON` — MySQL
+  username/password auth is disabled server-wide, Azure AD tokens are the only way in. So
+  `ConnectionStrings:MySql` in `appsettings.json` is a *passwordless* template (host/port/db/
+  `Uid=financeone-uami`, no `Pwd`); `Program.cs` appends a short-lived Azure AD access token as
+  the password at `AddDbContext` time, fetched via `DefaultAzureCredential` for the
+  `https://ossrdbms-aad.database.windows.net/.default` scope — the same credential/Workload
+  Identity used for Key Vault below, just a different token audience. `financeone-uami` is
+  mapped to a MySQL AAD user of the same name via `CREATE AADUSER` (one-time DB-side setup, not
+  in source control — see the AAD administrators on the server if this ever needs recreating).
+  Tokens are cached internally by `DefaultAzureCredential` and only re-issued near expiry, so the
+  connection string stays stable across most requests and ADO.NET's connection-string-keyed
+  pooling still works.
+- `Program.cs` also adds Azure Key Vault (`financeone-key-vault`, URI in `appsettings.json` ->
+  `KeyVault:Uri`) as a configuration source outside `Development`, via `AddAzureKeyVault` +
+  `DefaultAzureCredential` — same Workload Identity, `Microsoft.KeyVault/*` scope instead.
+  Secret names use `--` in place of `:` (e.g. a secret `Foo--Bar` becomes config key `Foo:Bar`)
+  — the Azure SDK's own convention, not custom mapping code. Nothing lives in the vault right
+  now (the DB connection moved to Azure AD auth instead of a stored password), but it stays
+  wired up: add new secrets there, not to `appsettings.json`/`appsettings.Development.json`
+  directly, and read them through `IConfiguration` the same way.
 
 ## Testing
 

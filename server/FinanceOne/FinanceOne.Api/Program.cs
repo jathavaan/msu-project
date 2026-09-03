@@ -1,3 +1,4 @@
+using Azure.Core;
 using Azure.Identity;
 using FinanceOne.Api.Common;
 using FinanceOne.Api.Features.Budgets;
@@ -12,11 +13,12 @@ using MySql.EntityFrameworkCore.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Outside Development, secrets (e.g. ConnectionStrings:MySql) come from Azure Key Vault
-// instead of appsettings/env vars. Secret names use "--" in place of ":" (e.g. the secret
-// "ConnectionStrings--MySql" becomes config key "ConnectionStrings:MySql").
-// DefaultAzureCredential resolves via Workload Identity when running in AKS, or the
-// developer's `az login` session when running locally against a non-Development environment.
+// Outside Development, secrets come from Azure Key Vault instead of appsettings/env vars.
+// Secret names use "--" in place of ":" (e.g. a secret "Foo--Bar" becomes config key
+// "Foo:Bar"). DefaultAzureCredential resolves via Workload Identity when running in AKS, or
+// the developer's `az login` session when running locally against a non-Development
+// environment. Nothing currently lives in the vault — the DB connection uses Azure AD auth
+// (below), not a stored password — but this stays wired up for whatever secrets come next.
 if (!builder.Environment.IsDevelopment())
 {
     var keyVaultUri = builder.Configuration["KeyVault:Uri"]
@@ -38,7 +40,25 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddDbContext<FinanceOneDbContext>(options =>
-    options.UseMySQL(builder.Configuration.GetConnectionString("MySql")!));
+{
+    var connectionString = builder.Configuration.GetConnectionString("MySql")!;
+
+    if (!builder.Environment.IsDevelopment())
+    {
+        // financeone-sqlserver has aad_auth_only=ON — no MySQL password auth exists at all.
+        // Use a short-lived Azure AD access token as the password instead, acquired via the
+        // same Workload Identity used for Key Vault (financeone-uami, mapped to the
+        // 'financeone-uami' AAD MySQL user via CREATE AADUSER). DefaultAzureCredential caches
+        // tokens internally and only re-issues near expiry, so the connection string stays
+        // stable across most requests — ADO.NET's connection pooling (keyed by connection
+        // string) still works.
+        var token = new DefaultAzureCredential()
+            .GetToken(new TokenRequestContext(["https://ossrdbms-aad.database.windows.net/.default"]));
+        connectionString += $";Pwd={token.Token}";
+    }
+
+    options.UseMySQL(connectionString);
+});
 
 builder.Services.AddFinanceOneServices();
 
