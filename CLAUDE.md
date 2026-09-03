@@ -12,7 +12,7 @@ server/
     FinanceOne.Api/     Minimal API backend — Vertical Slice Architecture
     FinanceOne.Test/    xUnit integration tests, mirrors FinanceOne.Api/Features/
 k8s/       Kubernetes manifests (client/server deployment + service)
-docker-compose.yml   Local dev stack: SQL Server db + server + client
+docker-compose.yml   Local dev stack: MySQL db + server + client
 ```
 
 ## Backend work
@@ -30,6 +30,6 @@ structure, Redux Toolkit / RTK Query conventions, and a non-obvious wire-format 
 
 ## Local dev
 
-`docker-compose.yml` at the repo root runs the full stack (SQL Server, API on `:8080`, client on
-`:5173`) — needs an `.env` with `MSSQL_SA_PASSWORD` set. The API also seeds dev-only fake data on
+`docker-compose.yml` at the repo root runs the full stack (MySQL, API on `:8080`, client on
+`:5173`) — needs an `.env` with `MYSQL_PASSWORD` set. The API also seeds dev-only fake data on
 startup (see `server/FinanceOne/CLAUDE.md` → Persistence/Seed).

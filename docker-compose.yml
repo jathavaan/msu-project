@@ -2,20 +2,34 @@ name: financeone
 
 services:
   db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mysql:8.4
     environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: financeone-db
+      MYSQL_USER: financeone
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "1433:1433"
+      - "3306:3306"
     volumes:
-      - mssql-data:/var/opt/mssql
+      - mysql-data:/var/lib/mysql
     healthcheck:
-      test: [ "CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1" ]
+      test: [ "CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  migrate:
+    build:
+      context: ./server/FinanceOne
+      dockerfile: FinanceOne.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__MySql: "Server=db;Port=3306;Database=financeone-db;Uid=financeone;Pwd=${MYSQL_PASSWORD};SslMode=None"
+    command: [ "--migrate" ]
+    depends_on:
+      db:
+        condition: service_healthy
 
   server:
     build:
@@ -23,12 +37,12 @@ services:
       dockerfile: FinanceOne.Api/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__SqlServer: "Server=db,1433;Database=financeone-db;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+      ConnectionStrings__MySql: "Server=db;Port=3306;Database=financeone-db;Uid=financeone;Pwd=${MYSQL_PASSWORD};SslMode=None"
     ports:
       - "8080:8080"
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   client:
     build:
@@ -41,4 +55,4 @@ services:
       - server
 
 volumes:
-  mssql-data:
+  mysql-data:

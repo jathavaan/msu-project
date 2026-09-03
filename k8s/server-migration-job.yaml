@@ -1,14 +1,12 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: financeone-server-deployment
-  labels: 
+  name: financeone-server-migrate
+  labels:
     app: financeone-server
 spec:
-  replicas: 1
-  selector:
-    matchLabels: 
-      app: financeone-server
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
   template:
     metadata:
       labels:
@@ -16,13 +14,11 @@ spec:
         azure.workload.identity/use: "true"
     spec:
       serviceAccountName: financeone-server
+      restartPolicy: Never
       containers:
-        - name: financeone-server
-          image: financeoneacr.azurecr.io/financeone-server:latest
-          imagePullPolicy: Always
-          ports:
-            - name: http
-              containerPort: 8080
+        - name: migrate
+          image: financeoneacr.azurecr.io/financeone-server:__IMAGE_TAG__
+          args: [ "--migrate" ]
           resources:
             requests:
               cpu: 25m
@@ -30,4 +26,3 @@ spec:
             limits:
               cpu: 50m
               memory: 256Mi
-

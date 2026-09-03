@@ -366,8 +366,22 @@ returns a generated id (`Response<Guid>`) or `Response<Unit>` needs no Vm.
 - `Domain/Enums/`
 - `Configurations/` — one `IEntityTypeConfiguration<T>` per entity; relations/constraints/precision live here, not in slices. Applied via `ApplyConfigurationsFromAssembly` in `FinanceOneDbContext`.
 - `Persistence/FinanceOneDbContext.cs` — one `DbSet<T>` per entity; add here when a new entity is introduced.
-- `Persistence/Migrations/` — run `dotnet ef migrations add <Name>` from `FinanceOne.Api/` after changing an entity or its configuration.
+- `Persistence/Migrations/` — run `dotnet ef migrations add <Name>` from `FinanceOne.Api/` after changing an entity or its configuration. Never applied by the running app itself — `dotnet FinanceOne.Api.dll --migrate` (handled early in `Program.cs`, before Kestrel starts) applies pending migrations and exits, using the same image as the app so migrations always match the code they ship with. In AKS this runs as a one-off `k8s/server-migration-job.yaml` Job, applied by the CI/CD workflow before the deployment is rolled. In docker-compose local dev, the `migrate` service runs the same `--migrate` flag once against the `db` container before `server` starts (`depends_on: condition: service_completed_successfully`).
 - `Persistence/Seed/FinanceOneDbSeeder.cs` — dev-only fake data, wired in `Program.cs` behind `IsDevelopment()`.
+
+## Configuration & secrets
+
+- `Development` (docker-compose, local `dotnet run`): `ConnectionStrings:MySql` comes from an
+  env var (docker-compose) or user-secrets (`UserSecretsId` in the csproj) — no Key Vault call.
+- Everywhere else (deployed to AKS, or run locally against a non-Development environment):
+  `Program.cs` adds Azure Key Vault (`financeone-key-vault`, URI in `appsettings.json` ->
+  `KeyVault:Uri`) as a configuration source via `AddAzureKeyVault` + `DefaultAzureCredential`.
+  Secret names use `--` in place of `:` (e.g. secret `ConnectionStrings--MySql` becomes
+  config key `ConnectionStrings:MySql`) — this is the Azure SDK's own convention, not custom
+  mapping code. `DefaultAzureCredential` resolves via AKS Workload Identity in the cluster, or the
+  developer's `az login` session when run locally.
+- Don't add new secrets to `appsettings.json`/`appsettings.Development.json` directly — add them
+  to the Key Vault and read them through `IConfiguration` the same way as `ConnectionStrings:MySql`.
 
 ## Testing
 
@@ -377,14 +391,14 @@ next to the slice it tests.
 - Integration tests, not handler-with-mocked-repository unit tests — since repositories talk to
   EF Core directly, the meaningful thing to verify is the slice's actual query/persistence
   behavior against a real database engine.
-- Use **Testcontainers** (`Testcontainers.MsSql`) to spin up a real SQL Server container per test
+- Use **Testcontainers** (`Testcontainers.MySql`) to spin up a real MySQL container per test
   run, migrated with the same `FinanceOneDbContext`/migrations used in production. This catches
-  SQL Server–specific behavior (decimal precision, unique indexes, cascade/restrict delete rules)
+  MySQL-specific behavior (decimal precision, unique indexes, cascade/restrict delete rules)
   that an in-memory or SQLite provider would silently miss.
 - One test class per slice, covering: the happy path, each documented failure case from that
   slice's `README.md` (404/409/etc.), and edge cases specific to its business rules.
 
-Add `Testcontainers.MsSql` and a test runner (`xunit` + `Microsoft.AspNetCore.Mvc.Testing`, or
+Add `Testcontainers.MySql` and a test runner (`xunit` + `Microsoft.AspNetCore.Mvc.Testing`, or
 whatever the team settles on) to `FinanceOne.Test.csproj` — not yet referenced.
 
 ## Ground rules
