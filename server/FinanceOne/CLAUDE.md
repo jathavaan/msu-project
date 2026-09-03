@@ -369,6 +369,20 @@ returns a generated id (`Response<Guid>`) or `Response<Unit>` needs no Vm.
 - `Persistence/Migrations/` — run `dotnet ef migrations add <Name>` from `FinanceOne.Api/` after changing an entity or its configuration.
 - `Persistence/Seed/FinanceOneDbSeeder.cs` — dev-only fake data, wired in `Program.cs` behind `IsDevelopment()`.
 
+## Configuration & secrets
+
+- `Development` (docker-compose, local `dotnet run`): `ConnectionStrings:SqlServer` comes from an
+  env var (docker-compose) or user-secrets (`UserSecretsId` in the csproj) — no Key Vault call.
+- Everywhere else (deployed to AKS, or run locally against a non-Development environment):
+  `Program.cs` adds Azure Key Vault (`financeone-key-vault`, URI in `appsettings.json` ->
+  `KeyVault:Uri`) as a configuration source via `AddAzureKeyVault` + `DefaultAzureCredential`.
+  Secret names use `--` in place of `:` (e.g. secret `ConnectionStrings--SqlServer` becomes
+  config key `ConnectionStrings:SqlServer`) — this is the Azure SDK's own convention, not custom
+  mapping code. `DefaultAzureCredential` resolves via AKS Workload Identity in the cluster, or the
+  developer's `az login` session when run locally.
+- Don't add new secrets to `appsettings.json`/`appsettings.Development.json` directly — add them
+  to the Key Vault and read them through `IConfiguration` the same way as `ConnectionStrings:SqlServer`.
+
 ## Testing
 
 `FinanceOne.Test/` mirrors `Features/` 1:1: `Features/Budgets/CreateBudget/CreateBudgetTests.cs`

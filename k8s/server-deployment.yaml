@@ -11,9 +11,11 @@ spec:
       app: financeone-server
   template:
     metadata:
-      labels: 
+      labels:
         app: financeone-server
+        azure.workload.identity/use: "true"
     spec:
+      serviceAccountName: financeone-server
       containers:
         - name: financeone-server
           image: financeoneacr.azurecr.io/financeone-server:latest

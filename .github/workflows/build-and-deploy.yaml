@@ -95,6 +95,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
         run: |
           kubectl apply \
+            -f k8s/server-serviceaccount.yaml \
             -f k8s/server-deployment.yaml \
             -f k8s/server-service.yaml \
             -n ${{ secrets.AKS_NAMESPACE }}

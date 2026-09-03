@@ -1,3 +1,4 @@
+using Azure.Identity;
 using FinanceOne.Api.Common;
 using FinanceOne.Api.Features.Budgets;
 using FinanceOne.Api.Features.Categories;
@@ -9,6 +10,18 @@ using FinanceOne.Api.Features.UpcomingPayments;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Outside Development, secrets (e.g. ConnectionStrings:SqlServer) come from Azure Key Vault
+// instead of appsettings/env vars. Secret names use "--" in place of ":" (e.g. the secret
+// "ConnectionStrings--SqlServer" becomes config key "ConnectionStrings:SqlServer").
+// DefaultAzureCredential resolves via Workload Identity when running in AKS, or the
+// developer's `az login` session when running locally against a non-Development environment.
+if (!builder.Environment.IsDevelopment())
+{
+    var keyVaultUri = builder.Configuration["KeyVault:Uri"]
+        ?? throw new InvalidOperationException("KeyVault:Uri must be configured outside Development.");
+    builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+}
 
 builder.Services.AddOpenApi();
 
