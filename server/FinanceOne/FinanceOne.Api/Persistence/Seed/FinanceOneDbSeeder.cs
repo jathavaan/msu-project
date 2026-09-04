@@ -178,10 +178,30 @@ public static class FinanceOneDbSeeder
             .RuleFor(d => d.ExpiryDate, f => DateOnly.FromDateTime(f.Date.Future(1)))
             .Generate(15);
 
+        // 1-2 monthly savings per goal, funding a portion of the goal's still-unmet amount
+        // (TargetAmount - CurrentAmount) at a plausible monthly rate rather than a flat range.
+        var monthlySavings = savingGoals
+            .SelectMany((goal, index) =>
+            {
+                var remaining = Math.Max(goal.TargetAmount - goal.CurrentAmount, 500m);
+                var faker = new Faker { Random = new Randomizer(1006 + index) };
+                var count = faker.Random.Int(1, 2);
+                return new Faker<MonthlySaving>()
+                    .UseSeed(1006 + index)
+                    .RuleFor(m => m.Id, _ => Guid.NewGuid())
+                    .RuleFor(m => m.Name, f => f.PickRandom("Automatic Transfer", "Round-Up Savings", "Payday Transfer"))
+                    .RuleFor(m => m.Amount, f => f.Finance.Amount(remaining * 0.02m, remaining * 0.1m))
+                    .RuleFor(m => m.SavingGoalId, _ => goal.Id)
+                    .RuleFor(m => m.RecurrenceDay, f => f.Random.Int(1, 28))
+                    .Generate(count);
+            })
+            .ToList();
+
         context.Incomes.AddRange(incomes);
         context.Expenses.AddRange(expenses);
         context.Budgets.AddRange(budgets);
         context.SavingGoals.AddRange(savingGoals);
+        context.MonthlySavings.AddRange(monthlySavings);
         context.DiscountCodes.AddRange(discountCodes);
 
         await context.SaveChangesAsync(cancellationToken);

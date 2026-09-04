@@ -9,6 +9,6 @@ import { apiBaseQuery } from '../lib/apiBaseQuery'
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: apiBaseQuery,
-  tagTypes: ['Category', 'Income', 'Expense', 'Budget', 'SavingGoal', 'DiscountCode', 'UpcomingPayment'],
+  tagTypes: ['Category', 'Income', 'Expense', 'Budget', 'SavingGoal', 'MonthlySaving', 'DiscountCode', 'UpcomingPayment'],
   endpoints: () => ({}),
 })

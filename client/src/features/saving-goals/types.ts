@@ -7,6 +7,8 @@ export interface SavingGoal {
   amountSaved: number
   amountRemaining: number
   daysRemaining: number
+  /** Sum of Amount across every Monthly Saving linked to this goal (0 if none). */
+  monthlyContribution: number
 }
 
 /** Mirrors Features/SavingGoals/CreateSavingGoal/CreateSavingGoalCommand.cs */

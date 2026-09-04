@@ -6,6 +6,7 @@ using FinanceOne.Api.Features.Categories;
 using FinanceOne.Api.Features.DiscountCodes;
 using FinanceOne.Api.Features.Expenses;
 using FinanceOne.Api.Features.Income;
+using FinanceOne.Api.Features.MonthlySavings;
 using FinanceOne.Api.Features.SavingGoals;
 using FinanceOne.Api.Features.UpcomingPayments;
 using Microsoft.EntityFrameworkCore;
@@ -144,6 +145,7 @@ app.MapCategoriesEndpoints();
 app.MapDiscountCodesEndpoints();
 app.MapExpensesEndpoints();
 app.MapIncomeEndpoints();
+app.MapMonthlySavingsEndpoints();
 app.MapSavingGoalsEndpoints();
 app.MapUpcomingPaymentsEndpoints();
 

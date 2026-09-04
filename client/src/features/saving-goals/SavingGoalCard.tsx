@@ -36,6 +36,11 @@ export function SavingGoalCard({ savingGoal, onEdit, onDelete }: SavingGoalCardP
           {savingGoal.daysRemaining >= 0 ? `${savingGoal.daysRemaining} days left` : `${Math.abs(savingGoal.daysRemaining)} days overdue`}
         </span>
       </div>
+      {savingGoal.monthlyContribution > 0 && (
+        <p className="mt-2 text-xs text-ink-muted">
+          Saving <span className="font-medium text-positive">{formatCurrency(savingGoal.monthlyContribution)}</span>/month towards this goal
+        </p>
+      )}
     </div>
   )
 }

@@ -12,6 +12,7 @@ public sealed class GetSavingGoalByIdHandler(IGetSavingGoalByIdRepository reposi
         }
 
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().DateTime);
+        var monthlyContribution = await repository.GetMonthlyContributionTotal(request.Id, cancellationToken);
         var vm = new SavingGoalVm(
             savingGoal.Id,
             savingGoal.Name,
@@ -19,7 +20,8 @@ public sealed class GetSavingGoalByIdHandler(IGetSavingGoalByIdRepository reposi
             savingGoal.TargetDate,
             savingGoal.CurrentAmount,
             savingGoal.TargetAmount - savingGoal.CurrentAmount,
-            Math.Max(0, savingGoal.TargetDate.DayNumber - today.DayNumber));
+            Math.Max(0, savingGoal.TargetDate.DayNumber - today.DayNumber),
+            monthlyContribution);
 
         return Response<SavingGoalVm>.Success(vm);
     }

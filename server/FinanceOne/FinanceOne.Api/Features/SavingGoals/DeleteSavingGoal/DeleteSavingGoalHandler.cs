@@ -11,6 +11,11 @@ public sealed class DeleteSavingGoalHandler(IDeleteSavingGoalRepository reposito
             return Response<Unit>.Failure(StatusCodes.Status404NotFound, "Saving goal not found.");
         }
 
+        if (await repository.IsReferenced(request.Id, cancellationToken))
+        {
+            return Response<Unit>.Failure(StatusCodes.Status409Conflict, "Saving goal is still referenced by a monthly saving.");
+        }
+
         await repository.Delete(savingGoal, cancellationToken);
         return Response<Unit>.Success(new Unit());
     }
