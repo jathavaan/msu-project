@@ -4,12 +4,14 @@ import { formatCurrency } from '../../lib/formatters'
 interface IncomeVsExpensesChartProps {
   totalIncome: number
   totalExpenses: number
+  totalMonthlySavings: number
 }
 
-export function IncomeVsExpensesChart({ totalIncome, totalExpenses }: IncomeVsExpensesChartProps) {
+export function IncomeVsExpensesChart({ totalIncome, totalExpenses, totalMonthlySavings }: IncomeVsExpensesChartProps) {
   const data = [
     { name: 'Income', amount: totalIncome, fill: '#16a34a' },
     { name: 'Expenses', amount: totalExpenses, fill: '#dc2626' },
+    { name: 'Savings', amount: totalMonthlySavings, fill: '#2563eb' },
   ]
 
   return (

@@ -10,4 +10,6 @@ public sealed class SavingGoal
     // Manually tracked progress towards TargetAmount. Defaults to 0 on create;
     // adjusted via UpdateSavingGoal. No dedicated "contribution" slice exists yet.
     public decimal CurrentAmount { get; set; }
+
+    public ICollection<MonthlySaving> MonthlySavings { get; init; } = [];
 }

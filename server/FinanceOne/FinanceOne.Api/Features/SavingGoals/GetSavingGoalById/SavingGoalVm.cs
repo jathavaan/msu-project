@@ -7,4 +7,5 @@ public sealed record SavingGoalVm(
     DateOnly TargetDate,
     decimal AmountSaved,
     decimal AmountRemaining,
-    int DaysRemaining);
+    int DaysRemaining,
+    decimal MonthlyContribution);

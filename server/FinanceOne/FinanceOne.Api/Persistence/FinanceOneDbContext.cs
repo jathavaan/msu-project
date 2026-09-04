@@ -13,6 +13,7 @@ public sealed class FinanceOneDbContext(DbContextOptions<FinanceOneDbContext> op
     public DbSet<DiscountCode> DiscountCodes => Set<DiscountCode>();
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<Income> Incomes => Set<Income>();
+    public DbSet<MonthlySaving> MonthlySavings => Set<MonthlySaving>();
     public DbSet<SavingGoal> SavingGoals => Set<SavingGoal>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

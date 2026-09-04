@@ -38,6 +38,7 @@
       <Folder Include="Features\DiscountCodes\" />
       <Folder Include="Features\Expenses\" />
       <Folder Include="Features\Income\" />
+      <Folder Include="Features\MonthlySavings\" />
       <Folder Include="Features\SavingGoals\" />
       <Folder Include="Features\UpcomingPayments\" />
     </ItemGroup>

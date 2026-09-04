@@ -6,6 +6,7 @@ public sealed class GetSavingGoalsHandler(IGetSavingGoalsRepository repository, 
     public async Task<Response<List<SavingGoalVm>>> Handle(GetSavingGoalsQuery request, CancellationToken cancellationToken)
     {
         var savingGoals = await repository.GetSavingGoals(cancellationToken);
+        var monthlyContributionTotals = await repository.GetMonthlyContributionTotals(cancellationToken);
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().DateTime);
 
         var vms = savingGoals
@@ -16,7 +17,8 @@ public sealed class GetSavingGoalsHandler(IGetSavingGoalsRepository repository, 
                 s.TargetDate,
                 s.CurrentAmount,
                 s.TargetAmount - s.CurrentAmount,
-                Math.Max(0, s.TargetDate.DayNumber - today.DayNumber)))
+                Math.Max(0, s.TargetDate.DayNumber - today.DayNumber),
+                monthlyContributionTotals.GetValueOrDefault(s.Id)))
             .ToList();
 
         return Response<List<SavingGoalVm>>.Success(vms);

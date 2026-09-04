@@ -70,7 +70,7 @@ namespace FinanceOne.Api.Persistence.Migrations
                     b.Property<string>("CodeText")
                         .HasColumnType("longtext");
 
-                    b.Property<DateOnly>("ExpiryDate")
+                    b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("date");
 
                     b.Property<string>("StoreName")
@@ -136,6 +136,33 @@ namespace FinanceOne.Api.Persistence.Migrations
                     b.ToTable("Incomes");
                 });
 
+            modelBuilder.Entity("FinanceOne.Api.Domain.Entites.MonthlySaving", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("RecurrenceDay")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SavingGoalId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SavingGoalId");
+
+                    b.ToTable("MonthlySavings");
+                });
+
             modelBuilder.Entity("FinanceOne.Api.Domain.Entites.SavingGoal", b =>
                 {
                     b.Property<Guid>("Id")
@@ -154,7 +181,7 @@ namespace FinanceOne.Api.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateOnly>("TargetDate")
+                    b.Property<DateTime>("TargetDate")
                         .HasColumnType("date");
 
                     b.HasKey("Id");
@@ -195,6 +222,17 @@ namespace FinanceOne.Api.Persistence.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("FinanceOne.Api.Domain.Entites.MonthlySaving", b =>
+                {
+                    b.HasOne("FinanceOne.Api.Domain.Entites.SavingGoal", "SavingGoal")
+                        .WithMany("MonthlySavings")
+                        .HasForeignKey("SavingGoalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SavingGoal");
+                });
+
             modelBuilder.Entity("FinanceOne.Api.Domain.Entites.Category", b =>
                 {
                     b.Navigation("Budget");
@@ -202,6 +240,11 @@ namespace FinanceOne.Api.Persistence.Migrations
                     b.Navigation("Expenses");
 
                     b.Navigation("Incomes");
+                });
+
+            modelBuilder.Entity("FinanceOne.Api.Domain.Entites.SavingGoal", b =>
+                {
+                    b.Navigation("MonthlySavings");
                 });
 #pragma warning restore 612, 618
         }
