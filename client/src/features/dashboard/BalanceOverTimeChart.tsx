@@ -5,6 +5,11 @@ import { useGetBalanceForecastQuery } from '../balance-forecast/api'
 import type { BalanceEntry, BalanceForecastPoint } from '../balance-forecast/types'
 import { formatCurrency } from '../../lib/formatters'
 
+// The balance can run into six figures (unlike the other dashboard charts, which only ever plot
+// a single month's totals), so axis ticks drop the decimals `formatCurrency` always includes —
+// full cents on a rounded gridline value add width without adding information.
+const axisCurrencyFormatter = new Intl.NumberFormat('nb-NO', { style: 'currency', currency: 'NOK', maximumFractionDigits: 0 })
+
 function EntryRow({ entry }: { entry: BalanceEntry }) {
   return (
     <p className="flex items-baseline justify-between gap-4">
@@ -90,8 +95,8 @@ export function BalanceOverTimeChart() {
           tickLine={false}
           axisLine={false}
           tick={{ fill: '#6b7280', fontSize: 12 }}
-          width={72}
-          tickFormatter={(value) => formatCurrency(Number(value))}
+          width={92}
+          tickFormatter={(value) => axisCurrencyFormatter.format(Number(value))}
         />
         <Tooltip content={BalanceTooltip} />
         <Area type="monotone" dataKey="balance" stroke="#2563eb" strokeWidth={2} fill="url(#balanceFill)" />
