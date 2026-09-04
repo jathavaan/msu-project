@@ -10,8 +10,32 @@ using FinanceOne.Api.Features.SavingGoals;
 using FinanceOne.Api.Features.UpcomingPayments;
 using Microsoft.EntityFrameworkCore;
 using MySql.EntityFrameworkCore.Extensions;
+using Serilog;
+using Serilog.Context;
+using Serilog.Formatting.Compact;
+using Serilog.Formatting.Display;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Replaces the default Microsoft.Extensions.Logging console provider. Config (levels/overrides)
+// comes from the "Serilog" section in appsettings — see server/FinanceOne/CLAUDE.md's Logging
+// section. Development gets plain readable console output; everywhere else gets one-line-per-
+// event JSON (CompactJsonFormatter) so AKS pod stdout is directly queryable once something
+// scrapes it, without needing a dedicated telemetry backend.
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+{
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithEnvironmentName()
+        .Enrich.WithMachineName();
+
+    loggerConfiguration.WriteTo.Console(context.HostingEnvironment.IsDevelopment()
+        ? new MessageTemplateTextFormatter(
+            "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}")
+        : new CompactJsonFormatter());
+});
 
 // Outside Development, secrets come from Azure Key Vault instead of appsettings/env vars.
 // Secret names use "--" in place of ":" (e.g. a secret "Foo--Bar" becomes config key
@@ -93,6 +117,23 @@ if (app.Environment.IsDevelopment())
     var db = scope.ServiceProvider.GetRequiredService<FinanceOneDbContext>();
     await FinanceOneDbSeeder.SeedAsync(db);
 }
+
+// Pushes the per-request TraceIdentifier onto Serilog's ambient LogContext, so every log line
+// written while handling this request (handler logs, the exception log below, and the request
+// summary line from UseSerilogRequestLogging) carries the same RequestId and can be grepped/
+// filtered together. Must wrap everything downstream, so it's the outermost middleware.
+app.Use(async (context, next) =>
+{
+    using (LogContext.PushProperty("RequestId", context.TraceIdentifier))
+    {
+        await next();
+    }
+});
+
+// One summary log line per request (method, path, status code, elapsed ms). Placed before
+// UseExceptionHandler so it still runs — and logs the resulting status code — even when a
+// downstream handler throws.
+app.UseSerilogRequestLogging();
 
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
