@@ -2,28 +2,32 @@ name: .NET Build and Test
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches-ignore: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build:
-  runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server/FinanceOne
 
-  steps:
+    steps:
       # 1. Fetch the repository code
       - name: Checkout code
         uses: actions/checkout@v4
-  
-   - name: Setup .NET
+
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x' 
-  
-    - name: Restore dependencies
-        run: dotnet restore
-  
-     - name: Run xUnit Tests
-        run: dotnet test --configuration Release --no-build --logger "trx;LogFileName=test_results.trx"
+          dotnet-version: '10.0.x'
 
-      
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Run xUnit Tests
+        run: dotnet test --configuration Release --no-build --logger "trx;LogFileName=test_results.trx"
