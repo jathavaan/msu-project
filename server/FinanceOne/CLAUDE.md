@@ -396,6 +396,33 @@ returns a generated id (`Response<Guid>`) or `Response<Unit>` needs no Vm.
   wired up: add new secrets there, not to `appsettings.json`/`appsettings.Development.json`
   directly, and read them through `IConfiguration` the same way.
 
+## Logging
+
+Serilog (`Serilog.AspNetCore` + `Serilog.Enrichers.Environment`), wired in `Program.cs` via
+`builder.Host.UseSerilog(...)`, replaces the default `Microsoft.Extensions.Logging` console
+provider entirely — `ILogger<T>` injection works exactly as normal everywhere, it's just backed
+by Serilog under the hood.
+
+- **Levels/overrides** live in the `Serilog:MinimumLevel` section of `appsettings.json` /
+  `appsettings.Development.json` (not the old `Logging:LogLevel` shape). Production overrides
+  `Microsoft.EntityFrameworkCore.Database.Command` to `Warning` to stop every SQL statement
+  logging at Information; Development leaves it alone so SQL is visible while debugging locally.
+- **Output**: Development writes plain readable text to the console. Everywhere else writes one
+  JSON object per log event (`CompactJsonFormatter`) to stdout — no App Insights/Log Analytics
+  wiring yet, this just makes pod stdout in AKS directly parseable once something collects it,
+  without committing to a specific backend.
+- **Per-request correlation**: a middleware in `Program.cs` pushes `HttpContext.TraceIdentifier`
+  onto Serilog's `LogContext` for the duration of each request, so every log line written while
+  handling it (handler logs, `GlobalExceptionHandler`'s exception log, and the request-summary
+  line from `UseSerilogRequestLogging()`) carries the same `RequestId` property — grep/filter by
+  that to reconstruct everything one request did. `UseSerilogRequestLogging()` itself logs one
+  summary line per request (method, path, status code, elapsed ms) and is registered before
+  `UseExceptionHandler()` so it still captures the resulting status code when a handler throws.
+- **Logging inside a slice**: inject `ILogger<XHandler>` (or `ILogger<XRepository>`) the same way
+  as any other dependency if a slice needs to log something — nothing slice-specific required.
+  There's no repo-wide convention yet for what business events are worth logging at Information;
+  discuss before adding logging as a matter of course to every handler.
+
 ## Testing
 
 `FinanceOne.Test/` mirrors `Features/` 1:1: `Features/Budgets/CreateBudget/CreateBudgetTests.cs`

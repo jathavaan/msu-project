@@ -10,7 +10,11 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
-        logger.LogError(exception, "Unhandled exception");
+        logger.LogError(
+            exception,
+            "Unhandled exception handling {Method} {Path}",
+            httpContext.Request.Method,
+            httpContext.Request.Path);
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
         await httpContext.Response.WriteAsJsonAsync(
             new ProblemDetails { Status = 500, Title = "An unexpected error occurred." },
