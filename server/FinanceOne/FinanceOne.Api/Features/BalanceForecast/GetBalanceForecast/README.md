@@ -1,19 +1,39 @@
 # Get Balance Forecast
 
-**Endpoint:** `GET /api/balance-forecast?month=`
+**Endpoint:** `GET /api/balance-forecast`
 
-Projects the account balance day-by-day across a given month, for the balance forecast graph on the README's Must-have list.
+Projects the running balance day-by-day across the project's 28-day period, for the "Graph that
+shows a balance forecast for the month" Must-have feature — the dashboard's income-vs-expenses
+balance graph.
 
 **Behavior**
-- `month` query parameter (e.g. `2026-09`) selects which month to project; defaults to the current month if omitted.
-- Reads recurring income (Income slice) and recurring expenses (Expenses slice) whose recurrence falls within the requested month, and walks the days of the month applying each as it occurs to produce a running balance.
-- Returns a list of points: `{ date, balance }`, one per day (or per day where the balance changes — cheaper payload, same graph).
+- No parameters — the period is always days 1-28. Recurrence (`Income.RecurrenceDay` /
+  `Expense.RecurrenceDay`) is capped at 1-28 specifically so every month can be walked as this
+  same fixed period regardless of which month it actually is or how many days it has.
+- Reads recurring income (Income slice) and recurring expenses (Expenses slice) and walks days 1
+  through 28, applying each occurrence as it falls due to produce a running balance.
+- Returns one point per day: `{ day, balance, incomes, expenses }`, where `incomes`/`expenses`
+  are the individual entries (`{ name, categoryName, amount }`) applied that day — this is what
+  drives the graph's hover tooltip, so a spike or dip can be traced back to what actually caused
+  it, not just the resulting number.
+- The balance starts at **0** and moves relative to that as income/expenses land — see "Starting
+  balance" below.
 
 **Read-only slice**
 - No commands, only this one query — it doesn't own any data itself.
 
-**Open questions before this can actually be implemented**
-- **Starting balance:** the projection needs a "balance as of today" to project forward from, but nothing in the slices so far models a current account balance. Does the user enter this manually, or is it computed from history? This needs an owner before Balance Forecast can be built.
-- **Cross-slice reads:** this is the first slice that needs data from two other slices (Income, Expenses) rather than owning its own table. Worth deciding now whether it reads through their repository interfaces (e.g. `IIncomeRepository`, `IExpenseRepository`) or queries the shared `AppDbContext` directly — the former respects the SRP split we set up per-slice, the latter is simpler but reaches across slice boundaries. (Resolved for the rest of the codebase: each slice's own repository queries `FinanceOneDbContext` directly, even for tables it doesn't own — see `GetUpcomingPayments` for an example. The same approach would apply here.)
+**Starting balance (resolved)**
+- Nothing in the domain models an actual account balance to project forward from (no slice owns
+  a "current balance" concept). Rather than invent one to unblock this graph, the balance here is
+  **relative**: it starts at 0 on day 1 and is the cumulative net of income minus expenses through
+  that day. It shows how the balance *moves* over the period — up on income days, down on expense
+  days — not an absolute account figure.
+- If a "starting balance" concept is introduced elsewhere later, this slice can add it as the
+  seed value instead of 0 without changing its shape.
 
-**Status:** deliberately not implemented yet — deferred until the starting-balance question above has an owner. Every other slice in this feature set has been built.
+**Cross-slice reads**
+- Queries `Incomes`/`Expenses` directly through its own repository via `FinanceOneDbContext`, per
+  the cross-slice read convention in `server/FinanceOne/CLAUDE.md` (own repository, no dependency
+  on another slice's repository interface) — the same approach `GetUpcomingPayments` uses.
+
+**Status:** implemented.

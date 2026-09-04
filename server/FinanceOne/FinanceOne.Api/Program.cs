@@ -1,6 +1,7 @@
 using Azure.Core;
 using Azure.Identity;
 using FinanceOne.Api.Common;
+using FinanceOne.Api.Features.BalanceForecast;
 using FinanceOne.Api.Features.Budgets;
 using FinanceOne.Api.Features.Categories;
 using FinanceOne.Api.Features.DiscountCodes;
@@ -140,6 +141,7 @@ app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseCors("Client");
 
+app.MapBalanceForecastEndpoints();
 app.MapBudgetsEndpoints();
 app.MapCategoriesEndpoints();
 app.MapDiscountCodesEndpoints();

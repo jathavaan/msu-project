@@ -4,6 +4,7 @@ import { Card } from '../../components/Card'
 import { StatTile } from './StatTile'
 import { SpendingByCategoryChart } from './SpendingByCategoryChart'
 import { IncomeVsExpensesChart } from './IncomeVsExpensesChart'
+import { BalanceOverTimeChart } from './BalanceOverTimeChart'
 import { UpcomingPaymentsWidget } from './UpcomingPaymentsWidget'
 import { BudgetSnapshot } from './BudgetSnapshot'
 import { SavingGoalsSnapshot } from './SavingGoalsSnapshot'
@@ -42,6 +43,12 @@ export function DashboardPage() {
           tone={availableAfterSavings >= 0 ? 'positive' : 'negative'}
         />
         <StatTile label="Total Saved" value={formatCurrency(totalSaved)} icon={<PiggyBank size={18} />} />
+      </div>
+
+      <div className="mb-6">
+        <Card title="Balance Over the Period" actions={<span className="text-xs text-ink-muted">Hover a day for details</span>}>
+          <BalanceOverTimeChart />
+        </Card>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
