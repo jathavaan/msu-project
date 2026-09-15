@@ -16,10 +16,10 @@ import { useGetMonthlySavingsQuery } from '../monthly-savings/api'
 import { formatCurrency } from '../../lib/formatters'
 
 export function DashboardPage() {
-  const { data: incomes } = useGetIncomesQuery()
-  const { data: expenses } = useGetExpensesQuery({})
-  const { data: savingGoals } = useGetSavingGoalsQuery()
-  const { data: monthlySavings } = useGetMonthlySavingsQuery()
+  const { data: incomes, isLoading: incomesLoading } = useGetIncomesQuery()
+  const { data: expenses, isLoading: expensesLoading } = useGetExpensesQuery({})
+  const { data: savingGoals, isLoading: savingGoalsLoading } = useGetSavingGoalsQuery()
+  const { data: monthlySavings, isLoading: monthlySavingsLoading } = useGetMonthlySavingsQuery()
 
   const totalIncome = incomes?.reduce((sum, income) => sum + income.amount, 0) ?? 0
   const totalExpenses = expenses?.reduce((sum, expense) => sum + expense.amount, 0) ?? 0
@@ -34,15 +34,33 @@ export function DashboardPage() {
       <PageHeader title="Dashboard" description="Your monthly recurring income and expenses at a glance." />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Monthly Income" value={formatCurrency(totalIncome)} icon={<TrendingUp size={18} />} tone="positive" />
-        <StatTile label="Monthly Expenses" value={formatCurrency(totalExpenses)} icon={<TrendingDown size={18} />} tone="negative" />
+        <StatTile
+          label="Monthly Income"
+          value={formatCurrency(totalIncome)}
+          icon={<TrendingUp size={18} />}
+          tone="positive"
+          isLoading={incomesLoading}
+        />
+        <StatTile
+          label="Monthly Expenses"
+          value={formatCurrency(totalExpenses)}
+          icon={<TrendingDown size={18} />}
+          tone="negative"
+          isLoading={expensesLoading}
+        />
         <StatTile
           label="Available After Savings"
           value={formatCurrency(availableAfterSavings)}
           icon={<Scale size={18} />}
           tone={availableAfterSavings >= 0 ? 'positive' : 'negative'}
+          isLoading={incomesLoading || expensesLoading || monthlySavingsLoading}
         />
-        <StatTile label="Total Saved" value={formatCurrency(totalSaved)} icon={<PiggyBank size={18} />} />
+        <StatTile
+          label="Total Saved"
+          value={formatCurrency(totalSaved)}
+          icon={<PiggyBank size={18} />}
+          isLoading={savingGoalsLoading}
+        />
       </div>
 
       <div className="mb-6">
