@@ -25,8 +25,13 @@ FinanceOne.Api/
         <Slice>Endpoint.cs
         <Name>Vm.cs              (only for queries that shouldn't return raw entities)
         README.md                 (already exists — describes endpoint behavior/business rules)
-FinanceOne.Test/
-  Features/<Group>/<Slice>/<Slice>Tests.cs   Mirrors the Features/ tree 1:1
+FinanceOne.UnitTests/
+  Common/                                              Cross-cutting tests (Response, DI conventions)
+  Features/<Group>/<Slice>/<Slice>HandlerTests.cs      Mirrors the Features/ tree 1:1
+  Features/<Group>/<Slice>/<Slice>ValidatorTests.cs
+FinanceOne.IntegrationTests/
+  Common/                                              MySqlFixture, IntegrationTest base class
+  Features/<Group>/<Slice>/<Slice>Tests.cs             Mirrors the Features/ tree 1:1
 ```
 
 ## Anatomy of a slice
@@ -396,6 +401,35 @@ returns a generated id (`Response<Guid>`) or `Response<Unit>` needs no Vm.
   wired up: add new secrets there, not to `appsettings.json`/`appsettings.Development.json`
   directly, and read them through `IConfiguration` the same way.
 
+## Health checks
+
+Two endpoints, registered in `Program.cs` and consumed by the probes in
+`k8s/server-deployment.yaml`:
+
+| Endpoint | Runs | Answers |
+|---|---|---|
+| `/health/live` | nothing (`Predicate = _ => false`) | "is this process still responding?" |
+| `/health/ready` | checks tagged `"ready"` — currently `AddDbContextCheck<FinanceOneDbContext>` | "can this pod actually serve a request?" |
+
+The split is the whole point, so keep it when adding checks:
+
+- **Never put a dependency check behind `/health/live`.** Liveness failure means *restart the pod*,
+  and restarting cannot fix an unreachable MySQL — it would just restart every replica at once and
+  turn a recoverable blip into an outage. A new check gets the `"ready"` tag unless there is a
+  specific reason it doesn't.
+- **Readiness gates the rollout.** A pod that fails `/health/ready` never joins the Service, so
+  `kubectl rollout status` in the deploy workflow fails and the previous version keeps serving.
+  That is what makes a broken deploy visible instead of silently succeeding.
+
+Both are registered as **terminal middleware** (`app.UseHealthChecks(...)`) rather than routed
+endpoints, positioned before the logging middleware and `UseHttpsRedirection`. Two reasons, both
+easy to undo by accident:
+
+1. Probes reach the container over plain HTTP. If an HTTPS port were ever configured, a routed
+   endpoint would answer them with a 307 — which kubelet counts as success, silently disabling both
+   probes.
+2. A probe every few seconds per pod would otherwise emit a request-summary log line each time.
+
 ## Logging
 
 Serilog (`Serilog.AspNetCore` + `Serilog.Enrichers.Environment`), wired in `Program.cs` via
@@ -425,21 +459,95 @@ by Serilog under the hood.
 
 ## Testing
 
-`FinanceOne.Test/` mirrors `Features/` 1:1: `Features/Budgets/CreateBudget/CreateBudgetTests.cs`
-next to the slice it tests.
+Two projects, both mirroring `Features/` 1:1, split so CI can run them as separate parallel jobs
+and so a unit test can never quietly acquire a database dependency.
 
-- Integration tests, not handler-with-mocked-repository unit tests — since repositories talk to
-  EF Core directly, the meaningful thing to verify is the slice's actual query/persistence
-  behavior against a real database engine.
-- Use **Testcontainers** (`Testcontainers.MySql`) to spin up a real MySQL container per test
-  run, migrated with the same `FinanceOneDbContext`/migrations used in production. This catches
-  MySQL-specific behavior (decimal precision, unique indexes, cascade/restrict delete rules)
-  that an in-memory or SQLite provider would silently miss.
-- One test class per slice, covering: the happy path, each documented failure case from that
-  slice's `README.md` (404/409/etc.), and edge cases specific to its business rules.
+### `FinanceOne.UnitTests/` — fast, no Docker
 
-Add `Testcontainers.MySql` and a test runner (`xunit` + `Microsoft.AspNetCore.Mvc.Testing`, or
-whatever the team settles on) to `FinanceOne.Test.csproj` — not yet referenced.
+Handlers and validators in isolation. Repositories are substituted with **NSubstitute**, so these
+tests pin down *decision logic*: which failure code a handler returns for which precondition, and
+that it doesn't write when it shouldn't.
+
+- `<Slice>HandlerTests.cs` — one test per branch through `Handle`, asserting the `Response<T>` and
+  (for the failure branches) that the repository was *not* called.
+- `<Slice>ValidatorTests.cs` — one per rule in the validator, using FluentValidation's
+  `TestValidate` / `ShouldHaveValidationErrorFor`.
+- `Common/ServiceRegistrationTests.cs` guards the convention-driven DI across **every** slice, not
+  just the tested ones: it asserts each handler, repository, and validator in the assembly actually
+  gets registered by `AddFinanceOneServices`. A slice that breaks the naming conventions fails here
+  instead of at runtime.
+
+### `FinanceOne.IntegrationTests/` — real MySQL via Testcontainers
+
+The real repository and the real handler against a real database engine. This is where anything
+the SQL itself decides belongs: decimal(18,2) rounding, the unique index behind "one budget per
+category", the `Restrict` delete rules on `Category`, `ORDER BY` results, and case-insensitive
+collation behaviour.
+
+- `Common/MySqlFixture.cs` starts one `mysql:8.0` container for the whole assembly and applies the
+  production migrations to it. All tests share it through `[Collection("Database")]`, which also
+  makes them run sequentially.
+- `Common/IntegrationTest.cs` is the base class: it deletes every table before each test and
+  exposes `GivenCategory` / `GivenBudget` / `GivenExpense` arrange helpers plus `NewContext()` — a
+  second `DbContext` for assertions, so a test can't pass on EF's change tracker alone.
+- One test class per slice, covering the happy path and each documented failure case from that
+  slice's `README.md` (404/409/etc.).
+
+Every implemented feature group is covered: `Budgets`, `Categories`, `Expenses`, `Income`,
+`SavingGoals`, `MonthlySavings`, `DiscountCodes` and `UpcomingPayments`. `BalanceForecast` has only
+a `README.md` and no implementation, so it has no tests yet — add them with the slice.
+
+Not covered yet: the HTTP layer itself (routing, `ValidationFilter`, the `Results.Problem` mapping).
+Those would need a `WebApplicationFactory`, which today would boot the dev seeder or demand Key
+Vault depending on the environment name — worth doing, but it needs a small `Program.cs`
+testability change first.
+
+### Writing tests for a new slice
+
+**A slice is not done until it has tests.** Adding `Features/<Group>/<Slice>/` means adding the
+matching folders in both test projects. Work down this list:
+
+| The slice has… | Then add |
+|---|---|
+| a `<Slice>Validator.cs` | `FinanceOne.UnitTests/…/<Slice>ValidatorTests.cs` — one test per `RuleFor`, plus one `Valid_Command_Passes` |
+| a `<Slice>Handler.cs` | `FinanceOne.UnitTests/…/<Slice>HandlerTests.cs` — one test per branch through `Handle` |
+| a repository | `FinanceOne.IntegrationTests/…/<Slice>Tests.cs` — the happy path and each failure case from the slice's `README.md` |
+
+Concretely, for each handler branch:
+
+- **Every failure branch** asserts both the `ErrorCode` *and* that the write method was **not**
+  called: `await _repository.DidNotReceive().Add(Arg.Any<X>(), Arg.Any<CancellationToken>())`.
+  Asserting only the status code would pass even if the handler saved first and failed after.
+- **The happy path** asserts on what was handed to the repository
+  (`Arg.Is<Expense>(e => e.Name == … && e.Amount == …)`), not just that it returned success.
+- **A handler that mutates a tracked entity** (every `Update<X>Handler`) asserts on the entity
+  object itself, since that is the only visible effect before `SaveChanges`.
+
+And in the integration test, cover whatever the *database* decides rather than repeating the unit
+test: `decimal(18,2)` rounding, unique indexes, `Restrict` delete rules, `ORDER BY`, the
+`DateOnly` ↔ `date` conversions, and `null`-vs-zero from `SumAsync`. If a test would pass against
+an in-memory list, it belongs in the unit project.
+
+### Test-writing conventions
+
+- **`CancellationToken.None`**, not `TestContext.Current.CancellationToken` — this is xUnit v2.
+- **Assert through `NewContext()`**, never through `Context`, when checking what was persisted.
+  Reading back through the same context hits EF's change tracker and will pass even if nothing
+  reached MySQL.
+- **Arrange through the `Given*` helpers** on `IntegrationTest` (`GivenCategory`, `GivenBudget`,
+  `GivenExpense`, `GivenIncome`, `GivenSavingGoal`, `GivenMonthlySaving`, `GivenDiscountCode`).
+  Add a new one there when a new entity appears, and add its table to the delete list in
+  `InitializeAsync` — **dependents before the rows they reference**, or the `Restrict` FKs reject
+  the cleanup and every later test fails on leftover data.
+- **Anything that reads the clock takes a `FakeTimeProvider`** (`Microsoft.Extensions.TimeProvider.Testing`),
+  never `TimeProvider.System`. `GetSavingGoals`, `GetUpcomingPayments`, `GetBudgets`,
+  `GetDiscountCodes` and the date validators all do. Existing tests pin 2026-06-15 — mid-month, so
+  recurrence days on both sides of "today" are expressible.
+- **The `Income` entity clashes with the `Features.Income` namespace.** Inside
+  `…Features.Income.*`, write `IncomeEntity` (a global using alias in each project's `Usings.cs`),
+  the same way the API writes `Domain.Entites.Income`.
+- **`Common/ServiceRegistrationTests.cs` covers DI for every slice automatically.** If it starts
+  failing after you add one, the slice broke a naming convention — fix the name, not the test.
 
 ## Ground rules
 

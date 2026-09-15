@@ -23,6 +23,36 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+          # Probes are served by UseHealthChecks in Program.cs.
+          #
+          # startupProbe covers the slow first start (EF model build, and the Azure AD token fetch
+          # for the database password). While it is running the other two are suspended, so a cold
+          # start can take up to 5 * 30 = 150s without being mistaken for a hang.
+          startupProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          # /health/ready checks the database. This is what makes `kubectl rollout status` in the
+          # deploy workflow mean something: a pod that cannot reach MySQL never becomes Ready, the
+          # rollout fails, and the previous ReplicaSet keeps serving.
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # /health/live deliberately runs no checks — restarting a pod cannot fix an unreachable
+          # database, and tying liveness to MySQL would restart every pod at once during a blip.
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           resources:
             requests:
               cpu: 25m

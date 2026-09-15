@@ -32,10 +32,30 @@ jobs:
               - 'client/**'
               - 'k8s/client-*.yaml'
 
-  build-and-push:
+  # The exact same build + parallel test fan-out the PR workflow runs, so a direct push to main or a
+  # semantic merge conflict can't reach ACR untested. Runs alongside `changes`, and gates everything
+  # after it.
+  test:
+    name: Build and test
+    uses: ./.github/workflows/build-and-test.yaml
+    # Granted per-job rather than at the top of this file: checks:write lets the test jobs publish
+    # their results as a check run, and scoping it here keeps it away from the jobs that hold the
+    # Azure OIDC token.
+    permissions:
+      contents: read
+      checks: write
+
+
+  # Server and client are independent from here down: each builds, pushes and deploys in its own
+  # chain, so a server rollout no longer waits on a client image build (or vice versa). Both chains
+  # still hang off `test`, so every test — frontend and backend — has to pass before either one
+  # pushes anything to ACR.
+
+  build-and-push-server:
     runs-on: ubuntu-latest
-    name: Build and push images to ACR
-    needs: changes
+    name: Build and push server image
+    needs: [ changes, test ]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -50,7 +70,6 @@ jobs:
         run: az acr login --name ${{ secrets.REGISTRY_LOGIN_SERVER }}
 
       - name: Build and push server image
-        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
         run: |
           docker build \
             -f server/FinanceOne/FinanceOne.Api/Dockerfile \
@@ -60,8 +79,25 @@ jobs:
           docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-server:${{ github.sha }}
           docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-server:latest
 
+  build-and-push-client:
+    runs-on: ubuntu-latest
+    name: Build and push client image
+    needs: [ changes, test ]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.client == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ACR login
+        run: az acr login --name ${{ secrets.REGISTRY_LOGIN_SERVER }}
+
       - name: Build and push client image
-        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.client == 'true'
         run: |
           docker build \
             -f client/Dockerfile \
@@ -71,10 +107,10 @@ jobs:
           docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-client:${{ github.sha }}
           docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-client:latest
 
-  deploy:
+  deploy-server:
     runs-on: ubuntu-latest
-    name: Deploy to AKS
-    needs: [changes, build-and-push]
+    name: Deploy server to AKS
+    needs: build-and-push-server
     steps:
       - uses: actions/checkout@v4
 
@@ -91,8 +127,9 @@ jobs:
           resource-group: ${{ secrets.RESOURCE_GROUP }}
           cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
 
+      # Migrations belong to the server chain and must land before the new pods roll, so they stay
+      # in this job rather than becoming one of their own.
       - name: Run database migrations
-        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
         run: |
           kubectl apply -f k8s/server-serviceaccount.yaml -n ${{ secrets.AKS_NAMESPACE }}
 
@@ -110,7 +147,6 @@ jobs:
           }
 
       - name: Deploy server
-        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true'
         run: |
           kubectl apply \
             -f k8s/server-serviceaccount.yaml \
@@ -120,10 +156,40 @@ jobs:
           kubectl set image deployment/financeone-server-deployment \
             financeone-server=${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-server:${{ github.sha }} \
             -n ${{ secrets.AKS_NAMESPACE }}
-          kubectl rollout status deployment/financeone-server-deployment -n ${{ secrets.AKS_NAMESPACE }}
+
+          # Now that the pod has a readiness probe, this genuinely blocks until the new pod can
+          # reach MySQL — so it needs a timeout, or a bad image would hang the job for hours. The
+          # old ReplicaSet keeps serving throughout, so a failure here leaves the last good
+          # version running.
+          kubectl rollout status deployment/financeone-server-deployment \
+            -n ${{ secrets.AKS_NAMESPACE }} --timeout=300s || {
+            echo "::error::Server rollout did not become ready; the previous version is still serving"
+            kubectl describe deployment/financeone-server-deployment -n ${{ secrets.AKS_NAMESPACE }}
+            kubectl logs -l app=financeone-server -n ${{ secrets.AKS_NAMESPACE }} --tail=100 --all-containers
+            exit 1
+          }
+
+  deploy-client:
+    runs-on: ubuntu-latest
+    name: Deploy client to AKS
+    needs: build-and-push-client
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set AKS context
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: ${{ secrets.RESOURCE_GROUP }}
+          cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
 
       - name: Deploy client
-        if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.client == 'true'
         run: |
           kubectl apply \
             -f k8s/client-deployment.yaml \
@@ -132,4 +198,11 @@ jobs:
           kubectl set image deployment/financeone-client-deployment \
             financeone-client=${{ secrets.REGISTRY_LOGIN_SERVER }}/financeone-client:${{ github.sha }} \
             -n ${{ secrets.AKS_NAMESPACE }}
-          kubectl rollout status deployment/financeone-client-deployment -n ${{ secrets.AKS_NAMESPACE }}
+
+          kubectl rollout status deployment/financeone-client-deployment \
+            -n ${{ secrets.AKS_NAMESPACE }} --timeout=300s || {
+            echo "::error::Client rollout did not become ready; the previous version is still serving"
+            kubectl describe deployment/financeone-client-deployment -n ${{ secrets.AKS_NAMESPACE }}
+            kubectl logs -l app=financeone-client -n ${{ secrets.AKS_NAMESPACE }} --tail=100 --all-containers
+            exit 1
+          }

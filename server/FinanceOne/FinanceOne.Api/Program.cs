@@ -10,6 +10,7 @@ using FinanceOne.Api.Features.Income;
 using FinanceOne.Api.Features.MonthlySavings;
 using FinanceOne.Api.Features.SavingGoals;
 using FinanceOne.Api.Features.UpcomingPayments;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using MySql.EntityFrameworkCore.Extensions;
 using Serilog;
@@ -88,6 +89,12 @@ builder.Services.AddDbContext<FinanceOneDbContext>(options =>
 
 builder.Services.AddFinanceOneServices();
 
+// Backs the two probe endpoints below. Only the database check is tagged "ready": liveness must
+// stay independent of the database, or a transient MySQL outage would make kubelet restart every
+// pod at once and turn a recoverable blip into an outage.
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<FinanceOneDbContext>("database", tags: ["ready"]);
+
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
@@ -119,6 +126,23 @@ if (app.Environment.IsDevelopment())
     var db = scope.ServiceProvider.GetRequiredService<FinanceOneDbContext>();
     await FinanceOneDbSeeder.SeedAsync(db);
 }
+
+// Kubernetes probes (see k8s/server-deployment.yaml).
+//
+//   /health/ready  runs the database check — the Service only sends traffic to a pod that can
+//                  actually reach MySQL. This is what makes `kubectl rollout status` meaningful:
+//                  without it a rollout reports success the moment the process starts.
+//   /health/live   runs no checks at all (Predicate = false); it answers "is this process still
+//                  responding", which is the only question a restart can fix.
+//
+// Registered as terminal middleware here rather than as routed endpoints, deliberately, so they
+// sit ahead of UseHttpsRedirection and the request logging:
+//   - probes reach the container over plain HTTP, and if an HTTPS port were ever configured a
+//     routed endpoint would answer them with a 307 that kubelet counts as success — silently
+//     disabling both probes;
+//   - a probe every few seconds per pod would otherwise fill the logs with request-summary lines.
+app.UseHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.UseHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 
 // Pushes the per-request TraceIdentifier onto Serilog's ambient LogContext, so every log line
 // written while handling this request (handler logs, the exception log below, and the request

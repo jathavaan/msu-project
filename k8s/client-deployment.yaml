@@ -21,6 +21,24 @@ spec:
           ports:
             - name: http
               containerPort: 80
+          # Readiness probes "/" rather than /healthz on purpose: "/" goes through nginx's
+          # try_files, so it only succeeds when the built SPA is actually present in the image.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # Liveness uses the static /healthz from nginx.conf — it answers whether nginx is still
+          # responding, which is the only thing a restart could fix.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           resources:
             requests:
               cpu: 25m
