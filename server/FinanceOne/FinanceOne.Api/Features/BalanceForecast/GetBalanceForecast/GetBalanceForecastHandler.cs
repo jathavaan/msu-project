@@ -12,8 +12,13 @@ public sealed class GetBalanceForecastHandler(IGetBalanceForecastRepository repo
         var incomes = await repository.GetRecurringIncomes(cancellationToken);
         var expenses = await repository.GetRecurringExpenses(cancellationToken);
 
+        // Every month walks the same recurring income/expenses, so last month ended exactly this
+        // much above where it started — that rolls over as this month's starting balance too,
+        // instead of resetting back to 0 on day 1.
+        var totalNet = incomes.Sum(i => i.Amount) - expenses.Sum(e => e.Amount);
+
         var points = new List<BalanceForecastPointVm>(PeriodDays);
-        var balance = 0m;
+        var balance = totalNet;
 
         for (var day = 1; day <= PeriodDays; day++)
         {

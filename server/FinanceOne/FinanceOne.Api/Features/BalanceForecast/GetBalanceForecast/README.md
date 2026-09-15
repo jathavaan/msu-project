@@ -16,20 +16,24 @@ balance graph.
   are the individual entries (`{ name, categoryName, amount }`) applied that day — this is what
   drives the graph's hover tooltip, so a spike or dip can be traced back to what actually caused
   it, not just the resulting number.
-- The balance starts at **0** and moves relative to that as income/expenses land — see "Starting
-  balance" below.
+- The balance starts from the **rolled-over total net of the period** (see "Starting balance"
+  below), not 0, and moves relative to that as income/expenses land.
 
 **Read-only slice**
 - No commands, only this one query — it doesn't own any data itself.
 
 **Starting balance (resolved)**
 - Nothing in the domain models an actual account balance to project forward from (no slice owns
-  a "current balance" concept). Rather than invent one to unblock this graph, the balance here is
-  **relative**: it starts at 0 on day 1 and is the cumulative net of income minus expenses through
-  that day. It shows how the balance *moves* over the period — up on income days, down on expense
-  days — not an absolute account figure.
-- If a "starting balance" concept is introduced elsewhere later, this slice can add it as the
-  seed value instead of 0 without changing its shape.
+  a "current balance" concept). The balance here is still **relative**, not an absolute account
+  figure — but it no longer resets to 0 on day 1 of every period.
+- Every month walks the exact same recurring income/expenses, so last month's ending balance is
+  always `totalNet` (all recurring income minus all recurring expenses for the 28-day period) more
+  than it started. That rolled-over total is this month's starting balance too — day 1 starts at
+  `totalNet` and day 28 ends at `2 × totalNet` — rather than every month artificially starting back
+  at 0.
+- If a "starting balance" concept (an actual account balance to seed the very first period) is
+  introduced elsewhere later, this slice can add it on top of the rolled-over total instead of
+  changing this shape.
 
 **Cross-slice reads**
 - Queries `Incomes`/`Expenses` directly through its own repository via `FinanceOneDbContext`, per
