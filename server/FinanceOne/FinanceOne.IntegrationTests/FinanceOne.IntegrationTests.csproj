@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- The Api is a Microsoft.NET.Sdk.Web project; tests need the same shared framework
+             to see ASP.NET Core types handlers return (StatusCodes, Results, ...). -->
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector" Version="6.0.4" />
+        <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.10.0" />
+        <!-- FinanceOne.Api compiles against EF Core 10.0.11 (pulled in by EntityFrameworkCore.Design)
+             while MySql.EntityFrameworkCore pins 10.0.9. Referenced explicitly so the test
+             assemblies bind to the same version the Api was built against. -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+        <PackageReference Include="Testcontainers.MySql" Version="4.14.0" />
+        <PackageReference Include="xunit" Version="2.9.3" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\FinanceOne.Api\FinanceOne.Api.csproj" />
+    </ItemGroup>
+
+</Project>

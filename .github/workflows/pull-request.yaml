@@ -1,0 +1,27 @@
+name: Pull Request
+
+# Only on the PR itself. Triggering on branch pushes as well would run the whole suite twice for
+# every push to a branch with an open PR. Use workflow_dispatch to check a branch before opening one.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+# Pushing again to a branch makes the in-flight run obsolete, so cancel it rather than paying for
+# both. Keyed per ref, so runs on different branches never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    uses: ./.github/workflows/build-and-test.yaml
+    # checks:write lets the test jobs publish their results as a check run with per-failure
+    # annotations on the diff. A called workflow can never hold more than its caller grants here.
+    permissions:
+      contents: read
+      checks: write

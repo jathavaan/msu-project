@@ -1,2 +1,8 @@
 # docker-compose local secrets (see .env.example)
 .env
+
+# vitest junit output (CI only)
+client/test-results/
+
+# dotnet test .trx output (CI only)
+server/FinanceOne/**/TestResults/
