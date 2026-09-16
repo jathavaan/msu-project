@@ -39,6 +39,9 @@ param githubMainBranchSubject string
 @description('GitHub OIDC subject for the pull_request-triggered infra what-if job.')
 param githubPullRequestSubject string
 
+@description('GitHub OIDC subject for the infra deploy job (environment-scoped, not branch-scoped — see identity.bicep).')
+param githubEnvironmentSubject string
+
 @description('Email address that receives Azure Monitor alert notifications.')
 param alertEmail string
 
@@ -101,6 +104,7 @@ module identity 'modules/identity.bicep' = {
     aksNamespace: aksNamespace
     githubMainBranchSubject: githubMainBranchSubject
     githubPullRequestSubject: githubPullRequestSubject
+    githubEnvironmentSubject: githubEnvironmentSubject
   }
 }
 
