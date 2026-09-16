@@ -1,5 +1,6 @@
 using Azure.Core;
 using Azure.Identity;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.Storage.Blobs;
 using FinanceOne.Api.Common;
 using FinanceOne.Api.Common.BlobStorage;
@@ -40,7 +41,12 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) =>
         ? new MessageTemplateTextFormatter(
             "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}")
         : new CompactJsonFormatter());
-});
+},
+    // Lets the same log events (including GlobalExceptionHandler's exception log) also reach the
+    // OpenTelemetry logging provider registered by UseAzureMonitor below, instead of only going to
+    // Serilog's own sinks. Stdout logging above is unaffected either way — this only adds a second
+    // destination.
+    writeToProviders: true);
 
 // Outside Development, secrets come from Azure Key Vault instead of appsettings/env vars.
 // Secret names use "--" in place of ":" (e.g. a secret "Foo--Bar" becomes config key
@@ -53,6 +59,27 @@ if (!builder.Environment.IsDevelopment())
     var keyVaultUri = builder.Configuration["KeyVault:Uri"]
         ?? throw new InvalidOperationException("KeyVault:Uri must be configured outside Development.");
     builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+}
+
+// Application Insights via the Azure Monitor OpenTelemetry Distro (issue #50): ASP.NET Core
+// request traces, outgoing HttpClient dependency calls, and (via writeToProviders above) the same
+// ILogger events already going to stdout, all in one exporter. Skipped entirely rather than
+// pointed at a placeholder when no connection string is configured (Development has none), so
+// nothing tries to phone home locally. `ApplicationInsights:ConnectionString` outside Development
+// resolves from Key Vault (`ApplicationInsights--ConnectionString`), same as every other secret —
+// see server/FinanceOne/CLAUDE.md's Configuration & secrets section.
+//
+// MySql.EntityFrameworkCore's underlying driver (Oracle's MySql.Data) has no OpenTelemetry
+// ActivitySource of its own, so MySQL calls won't show up as dependency spans the way HttpClient
+// calls do — nothing to wire up for that today.
+var appInsightsConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
+if (!string.IsNullOrEmpty(appInsightsConnectionString))
+{
+    builder.Services.AddOpenTelemetry().UseAzureMonitor(options =>
+    {
+        options.ConnectionString = appInsightsConnectionString;
+        options.SamplingRatio = 1.0f; // 100% capture, no sampling — see issue #50.
+    });
 }
 
 builder.Services.AddOpenApi();

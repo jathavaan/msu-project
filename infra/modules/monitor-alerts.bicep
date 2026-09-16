@@ -148,7 +148,10 @@ resource apiServerExceptionsHigh 'Microsoft.Insights/metricAlerts@2018-03-01' = 
           metricNamespace: 'microsoft.insights/components'
           operator: 'GreaterThan'
           threshold: 10
-          timeAggregation: 'Total'
+          // exceptions/server only supports Count as its time aggregation ("Time aggregation must
+          // be one of [Count]") — Total, which every other alert in this file uses, isn't valid
+          // for this specific metric.
+          timeAggregation: 'Count'
           criterionType: 'StaticThresholdCriterion'
         }
       ]

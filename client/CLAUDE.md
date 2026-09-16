@@ -85,6 +85,14 @@ Vite's `loadEnv`), so `docker-compose.yml`'s `build.args` is what actually contr
 docker-compose value even though `.env.production` also exists as a plain-`npm run build`
 fallback.
 
+`VITE_APPLICATIONINSIGHTS_CONNECTION_STRING` (`src/lib/appInsights.ts`, issue #50) follows the same
+build-time-baked pattern, but is deliberately left unset everywhere in source control — it's a
+connection string, not an IP. `Dockerfile`'s `ARG` defaults to empty, so a plain `npm run build` or
+`docker-compose up` ships with telemetry disabled (`appInsights` is `null`). The AKS/CI build is
+the only target that sets a real value, via `--build-arg` in
+`.github/workflows/build-and-deploy.yaml` reading a GitHub secret — see that workflow's
+`build-and-push-client` job.
+
 ## Local dev
 
 `npm run dev` (needs the API running separately — see the root `CLAUDE.md`), `npm run build`
