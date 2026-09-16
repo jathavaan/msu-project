@@ -15,6 +15,7 @@ public sealed class UpdateSavingGoalHandler(IUpdateSavingGoalRepository reposito
         savingGoal.TargetAmount = request.TargetAmount;
         savingGoal.TargetDate = request.TargetDate;
         savingGoal.CurrentAmount = request.CurrentAmount;
+        savingGoal.InterestRate = request.InterestRate;
         await repository.Update(cancellationToken);
         return Response<Unit>.Success(new Unit());
     }

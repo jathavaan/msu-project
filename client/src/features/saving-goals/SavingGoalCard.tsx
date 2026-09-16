@@ -2,6 +2,8 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../../components/Button'
 import { ProgressBar } from '../../components/ProgressBar'
 import { formatCurrency, formatDate } from '../../lib/formatters'
+import { useGetSavingGoalProjectionQuery } from './api'
+import { formatReachDateMessage } from './formatReachDate'
 import type { SavingGoal } from './types'
 
 interface SavingGoalCardProps {
@@ -11,6 +13,11 @@ interface SavingGoalCardProps {
 }
 
 export function SavingGoalCard({ savingGoal, onEdit, onDelete }: SavingGoalCardProps) {
+  // A goal already met has nothing left to project — skip the request and let the progress bar
+  // (already at/over 100%) speak for itself instead.
+  const alreadyMet = savingGoal.amountRemaining <= 0
+  const { data: projection } = useGetSavingGoalProjectionQuery(savingGoal.id, { skip: alreadyMet })
+
   return (
     <div className="rounded-xl border border-border p-4">
       <div className="mb-2 flex items-start justify-between">
@@ -41,6 +48,7 @@ export function SavingGoalCard({ savingGoal, onEdit, onDelete }: SavingGoalCardP
           Saving <span className="font-medium text-positive">{formatCurrency(savingGoal.monthlyContribution)}</span>/month towards this goal
         </p>
       )}
+      {!alreadyMet && projection && <p className="mt-1 text-xs text-ink-muted">{formatReachDateMessage(projection.reachDate)}</p>}
     </div>
   )
 }

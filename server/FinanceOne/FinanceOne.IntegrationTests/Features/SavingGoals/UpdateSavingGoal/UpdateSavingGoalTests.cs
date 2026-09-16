@@ -53,6 +53,35 @@ public class UpdateSavingGoalTests(MySqlFixture fixture) : IntegrationTest(fixtu
         Assert.Equal(60_000m, (await context.SavingGoals.SingleAsync(s => s.Id == goal.Id)).CurrentAmount);
     }
 
+    [Fact]
+    public async Task Persists_The_Interest_Rate()
+    {
+        var goal = await GivenSavingGoal("New Car", 250_000m, new DateOnly(2027, 6, 15));
+
+        await Handler.Handle(
+            new UpdateSavingGoalCommand(goal.Id, "New Car", 250_000m, new DateOnly(2027, 6, 15), 0m, 4.5m),
+            CancellationToken.None);
+
+        await using var context = NewContext();
+        Assert.Equal(4.5m, (await context.SavingGoals.SingleAsync(s => s.Id == goal.Id)).InterestRate);
+    }
+
+    [Fact]
+    public async Task Clears_A_Previously_Set_Interest_Rate_When_Omitted()
+    {
+        var goal = await GivenSavingGoal("New Car", 250_000m, new DateOnly(2027, 6, 15));
+        await Handler.Handle(
+            new UpdateSavingGoalCommand(goal.Id, "New Car", 250_000m, new DateOnly(2027, 6, 15), 0m, 4.5m),
+            CancellationToken.None);
+
+        await Handler.Handle(
+            new UpdateSavingGoalCommand(goal.Id, "New Car", 250_000m, new DateOnly(2027, 6, 15), 0m),
+            CancellationToken.None);
+
+        await using var context = NewContext();
+        Assert.Null((await context.SavingGoals.SingleAsync(s => s.Id == goal.Id)).InterestRate);
+    }
+
     // Editing a goal must not disturb what funds it.
     [Fact]
     public async Task Leaves_Its_Monthly_Savings_Untouched()

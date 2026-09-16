@@ -11,7 +11,8 @@ public sealed class CreateSavingGoalHandler(ICreateSavingGoalRepository reposito
             Name = request.Name,
             TargetAmount = request.TargetAmount,
             TargetDate = request.TargetDate,
-            CurrentAmount = 0
+            CurrentAmount = 0,
+            InterestRate = request.InterestRate
         };
         var id = await repository.Add(savingGoal, cancellationToken);
         return Response<Guid>.Success(id);

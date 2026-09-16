@@ -51,6 +51,25 @@ public class CreateSavingGoalValidatorTests
         result.ShouldNotHaveValidationErrorFor(c => c.TargetDate);
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(100.01)]
+    public void InterestRate_Must_Be_Between_Zero_And_A_Hundred(decimal rate)
+    {
+        var result = _validator.TestValidate(Valid() with { InterestRate = rate });
+
+        result.ShouldHaveValidationErrorFor(c => c.InterestRate);
+    }
+
+    // InterestRate is optional, so omitting it (null) must not trip the InclusiveBetween rule.
+    [Fact]
+    public void InterestRate_May_Be_Omitted()
+    {
+        var result = _validator.TestValidate(Valid() with { InterestRate = null });
+
+        result.ShouldNotHaveValidationErrorFor(c => c.InterestRate);
+    }
+
     [Fact]
     public void Valid_Command_Passes()
     {

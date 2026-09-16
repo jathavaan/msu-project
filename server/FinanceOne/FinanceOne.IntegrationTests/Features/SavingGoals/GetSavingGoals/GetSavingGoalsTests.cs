@@ -76,4 +76,24 @@ public class GetSavingGoalsTests(MySqlFixture fixture) : IntegrationTest(fixture
         Assert.Equal(170_000m, vm.AmountRemaining);
         Assert.Equal(90, vm.DaysRemaining);
     }
+
+    [Fact]
+    public async Task Includes_The_Interest_Rate_When_Set()
+    {
+        await GivenSavingGoal("New Car", 250_000m, Today.AddDays(90), interestRate: 4.5m);
+
+        var response = await Handler.Handle(new GetSavingGoalsQuery(), CancellationToken.None);
+
+        Assert.Equal(4.5m, Assert.Single(response.Result!).InterestRate);
+    }
+
+    [Fact]
+    public async Task Reports_Null_Interest_Rate_When_Not_Set()
+    {
+        await GivenSavingGoal("New Car", 250_000m, Today.AddDays(90));
+
+        var response = await Handler.Handle(new GetSavingGoalsQuery(), CancellationToken.None);
+
+        Assert.Null(Assert.Single(response.Result!).InterestRate);
+    }
 }

@@ -11,5 +11,9 @@ public sealed class SavingGoal
     // adjusted via UpdateSavingGoal. No dedicated "contribution" slice exists yet.
     public decimal CurrentAmount { get; set; }
 
+    // Optional annual interest rate (percentage, e.g. 4.5 = 4.5%), compounded monthly by
+    // GetSavingGoalProjection. Null/0 means no interest — projection is contribution-only.
+    public decimal? InterestRate { get; set; }
+
     public ICollection<MonthlySaving> MonthlySavings { get; init; } = [];
 }
