@@ -39,6 +39,11 @@ resource federatedMainBranch 'Microsoft.ManagedIdentity/userAssignedIdentities/f
   }
 }
 
+// Azure's Managed Identity RP rejects concurrent federated-credential writes on the same identity
+// (ConcurrentFederatedIdentityCredentialsWritesForSingleManagedIdentity) — and Bicep/ARM deploys
+// sibling resources in parallel by default since nothing here otherwise depends on another. Each
+// of these three needs an explicit dependsOn on the previous one purely to force them to run one at
+// a time; the credentials themselves have no real relationship to each other.
 resource federatedPullRequest 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2024-11-30' = {
   parent: uami
   name: 'github-actions-pull-request'
@@ -47,6 +52,9 @@ resource federatedPullRequest 'Microsoft.ManagedIdentity/userAssignedIdentities/
     subject: githubPullRequestSubject
     audiences: [ 'api://AzureADTokenExchange' ]
   }
+  dependsOn: [
+    federatedMainBranch
+  ]
 }
 
 resource federatedEnvironment 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2024-11-30' = {
@@ -57,6 +65,9 @@ resource federatedEnvironment 'Microsoft.ManagedIdentity/userAssignedIdentities/
     subject: githubEnvironmentSubject
     audiences: [ 'api://AzureADTokenExchange' ]
   }
+  dependsOn: [
+    federatedPullRequest
+  ]
 }
 
 resource federatedWorkloadIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2024-11-30' = {
@@ -67,6 +78,9 @@ resource federatedWorkloadIdentity 'Microsoft.ManagedIdentity/userAssignedIdenti
     subject: 'system:serviceaccount:${aksNamespace}:financeone-server'
     audiences: [ 'api://AzureADTokenExchange' ]
   }
+  dependsOn: [
+    federatedEnvironment
+  ]
 }
 
 output principalId string = uami.properties.principalId
