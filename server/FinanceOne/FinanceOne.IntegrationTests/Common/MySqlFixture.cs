@@ -34,11 +34,14 @@ public sealed class MySqlFixture : IAsyncLifetime
 }
 
 /// <summary>
-/// Every integration test joins this collection, so the container is started once and tests run
+/// Every integration test joins this collection, so the containers are started once and tests run
 /// sequentially — which is also what lets each test wipe the tables without racing the others.
+/// Also provides <see cref="AzuriteFixture"/>: a test class picks up either fixture (or both) just by
+/// naming it as a constructor parameter, xUnit resolves them by type regardless of which
+/// ICollectionFixture&lt;T&gt; declared them.
 /// </summary>
 [CollectionDefinition(Name)]
-public sealed class DatabaseCollection : ICollectionFixture<MySqlFixture>
+public sealed class DatabaseCollection : ICollectionFixture<MySqlFixture>, ICollectionFixture<AzuriteFixture>
 {
     public const string Name = "Database";
 }
