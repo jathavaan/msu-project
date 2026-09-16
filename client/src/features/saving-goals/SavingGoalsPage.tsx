@@ -6,8 +6,10 @@ import { Modal } from '../../components/Modal'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { QueryState } from '../../components/QueryState'
 import { EmptyState } from '../../components/EmptyState'
+import { Card } from '../../components/Card'
 import { SavingGoalCard } from './SavingGoalCard'
 import { SavingGoalForm } from './SavingGoalForm'
+import { TotalSavingsProjectionChart } from './TotalSavingsProjectionChart'
 import { useDeleteSavingGoalMutation, useGetSavingGoalsQuery } from './api'
 import type { SavingGoal } from './types'
 
@@ -46,6 +48,12 @@ export function SavingGoalsPage() {
           />
         }
       >
+        <div className="mb-6">
+          <Card title="Total Projected Savings" actions={<span className="text-xs text-ink-muted">Next 5 years, across all goals</span>}>
+            <TotalSavingsProjectionChart />
+          </Card>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {savingGoals?.map((savingGoal) => (
             <SavingGoalCard key={savingGoal.id} savingGoal={savingGoal} onEdit={setEditing} onDelete={setDeleting} />
