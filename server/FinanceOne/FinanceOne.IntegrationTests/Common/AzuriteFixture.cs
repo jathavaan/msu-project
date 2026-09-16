@@ -25,7 +25,8 @@ public sealed class AzuriteFixture : IAsyncLifetime
         await _container.StartAsync();
 
         var blobServiceClient = new BlobServiceClient(_container.GetConnectionString());
-        foreach (var container in new[] { BlobContainers.Coupons, BlobContainers.Exports, BlobContainers.StagedCsv })
+        foreach (var container in new[]
+                 { BlobContainers.Coupons, BlobContainers.Exports, BlobContainers.StagedCsv, BlobContainers.SavingGoalImages })
         {
             await blobServiceClient.GetBlobContainerClient(container).CreateIfNotExistsAsync();
         }

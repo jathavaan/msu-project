@@ -20,7 +20,8 @@ public class GetSavingGoalsHandlerTests
         decimal targetAmount = 100_000m,
         decimal currentAmount = 0m,
         DateOnly? targetDate = null,
-        decimal? interestRate = null) => new()
+        decimal? interestRate = null,
+        string? imageUrl = null) => new()
     {
         Id = id,
         Name = "New Car",
@@ -28,6 +29,7 @@ public class GetSavingGoalsHandlerTests
         CurrentAmount = currentAmount,
         TargetDate = targetDate ?? Today.AddDays(30),
         InterestRate = interestRate,
+        ImageUrl = imageUrl,
     };
 
     private void Given(List<SavingGoal> goals, Dictionary<Guid, decimal>? contributions = null)
@@ -142,5 +144,25 @@ public class GetSavingGoalsHandlerTests
         var response = await Handler.Handle(new GetSavingGoalsQuery(), CancellationToken.None);
 
         Assert.Null(Assert.Single(response.Result!).InterestRate);
+    }
+
+    [Fact]
+    public async Task Carries_The_Goals_Image_Url_Through_Unchanged()
+    {
+        Given([AGoal(Guid.NewGuid(), imageUrl: "/api/saving-goals/g1/image")]);
+
+        var response = await Handler.Handle(new GetSavingGoalsQuery(), CancellationToken.None);
+
+        Assert.Equal("/api/saving-goals/g1/image", Assert.Single(response.Result!).ImageUrl);
+    }
+
+    [Fact]
+    public async Task Reports_Null_Image_Url_When_No_Image_Has_Been_Uploaded()
+    {
+        Given([AGoal(Guid.NewGuid())]);
+
+        var response = await Handler.Handle(new GetSavingGoalsQuery(), CancellationToken.None);
+
+        Assert.Null(Assert.Single(response.Result!).ImageUrl);
     }
 }

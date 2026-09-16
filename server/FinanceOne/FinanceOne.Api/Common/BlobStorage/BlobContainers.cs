@@ -10,4 +10,5 @@ public static class BlobContainers
     public const string Coupons = "coupons";
     public const string Exports = "exports";
     public const string StagedCsv = "staged-csv";
+    public const string SavingGoalImages = "saving-goal-images";
 }

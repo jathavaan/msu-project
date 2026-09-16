@@ -35,6 +35,15 @@ const rawBaseQuery = fetchBaseQuery({
 })
 
 /**
+ * Resolves a relative API path (e.g. a `SavingGoal.imageUrl` of `/api/saving-goals/{id}/image`)
+ * to an absolute URL the browser can load directly (an `<img src>`, not through RTK Query), since
+ * the client's own origin differs from the API's in every non-unified-ingress deploy target.
+ */
+export function resolveApiUrl(path: string): string {
+  return `${import.meta.env.VITE_API_BASE_URL}${path}`
+}
+
+/**
  * Wraps fetchBaseQuery to unwrap the backend's Response<T> envelope (used by every GET) into a
  * plain result, and to normalize both ProblemDetails and ValidationProblemDetails error bodies
  * into one ApiError shape. Mutating endpoints (POST/PUT/DELETE) return either a plain value or

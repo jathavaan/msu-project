@@ -19,7 +19,8 @@ public sealed class GetSavingGoalsHandler(IGetSavingGoalsRepository repository, 
                 s.TargetAmount - s.CurrentAmount,
                 Math.Max(0, s.TargetDate.DayNumber - today.DayNumber),
                 monthlyContributionTotals.GetValueOrDefault(s.Id),
-                s.InterestRate))
+                s.InterestRate,
+                s.ImageUrl))
             .ToList();
 
         return Response<List<SavingGoalVm>>.Success(vms);

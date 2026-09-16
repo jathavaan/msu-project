@@ -38,6 +38,17 @@ export const savingGoalsApi = apiSlice.injectEndpoints({
         { type: 'SavingGoal', id: 'LIST' },
       ],
     }),
+    uploadSavingGoalImage: builder.mutation<void, { id: string; file: File }>({
+      query: ({ id, file }) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        return { url: `/saving-goals/${id}/image`, method: 'PUT', body: formData }
+      },
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'SavingGoal', id },
+        { type: 'SavingGoal', id: 'LIST' },
+      ],
+    }),
   }),
 })
 
@@ -47,4 +58,5 @@ export const {
   useUpdateSavingGoalMutation,
   useDeleteSavingGoalMutation,
   useGetSavingGoalProjectionQuery,
+  useUploadSavingGoalImageMutation,
 } = savingGoalsApi

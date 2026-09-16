@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
+import { ImageIcon } from 'lucide-react'
 import { Input } from '../../components/Input'
 import { Button } from '../../components/Button'
 import { ErrorBanner } from '../../components/ErrorBanner'
-import { getErrorMessage } from '../../lib/apiBaseQuery'
-import { useCreateSavingGoalMutation, useUpdateSavingGoalMutation } from './api'
+import { getErrorMessage, resolveApiUrl } from '../../lib/apiBaseQuery'
+import { useCreateSavingGoalMutation, useUpdateSavingGoalMutation, useUploadSavingGoalImageMutation } from './api'
 import { SavingGoalProjectionChart } from './SavingGoalProjectionChart'
 import type { SavingGoal } from './types'
 
@@ -20,17 +21,33 @@ export function SavingGoalForm({ savingGoal, onDone }: SavingGoalFormProps) {
   const [targetDate, setTargetDate] = useState(savingGoal?.targetDate ?? '')
   const [amountSaved, setAmountSaved] = useState(savingGoal?.amountSaved.toString() ?? '0')
   const [interestRate, setInterestRate] = useState(savingGoal?.interestRate?.toString() ?? '')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    savingGoal?.imageUrl ? resolveApiUrl(savingGoal.imageUrl) : null,
+  )
 
   const [createSavingGoal, { isLoading: isCreating, error: createError }] = useCreateSavingGoalMutation()
   const [updateSavingGoal, { isLoading: isUpdating, error: updateError }] = useUpdateSavingGoalMutation()
+  const [uploadSavingGoalImage, { isLoading: isUploadingImage, error: uploadImageError }] =
+    useUploadSavingGoalImageMutation()
 
-  const isSaving = isCreating || isUpdating
-  const errorMessage = getErrorMessage(createError ?? updateError)
+  const isSaving = isCreating || isUpdating || isUploadingImage
+  const errorMessage = getErrorMessage(createError ?? updateError ?? uploadImageError)
+
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null
+    if (imageFile) {
+      URL.revokeObjectURL(imagePreview!)
+    }
+    setImageFile(file)
+    setImagePreview(file ? URL.createObjectURL(file) : savingGoal?.imageUrl ? resolveApiUrl(savingGoal.imageUrl) : null)
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     const parsedInterestRate = interestRate ? Number(interestRate) : null
     try {
+      let id = savingGoal?.id
       if (savingGoal) {
         await updateSavingGoal({
           id: savingGoal.id,
@@ -41,12 +58,15 @@ export function SavingGoalForm({ savingGoal, onDone }: SavingGoalFormProps) {
           interestRate: parsedInterestRate,
         }).unwrap()
       } else {
-        await createSavingGoal({
+        id = await createSavingGoal({
           name,
           targetAmount: Number(targetAmount),
           targetDate,
           interestRate: parsedInterestRate,
         }).unwrap()
+      }
+      if (imageFile && id) {
+        await uploadSavingGoalImage({ id, file: imageFile }).unwrap()
       }
       onDone()
     } catch {
@@ -94,6 +114,16 @@ export function SavingGoalForm({ savingGoal, onDone }: SavingGoalFormProps) {
         value={interestRate}
         onChange={(event) => setInterestRate(event.target.value)}
       />
+      <div className="flex items-center gap-3">
+        {imagePreview ? (
+          <img src={imagePreview} alt="" className="h-12 w-12 rounded-lg object-cover" />
+        ) : (
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-page text-ink-faint">
+            <ImageIcon size={18} />
+          </div>
+        )}
+        <Input label="Image (optional)" type="file" accept="image/*" onChange={handleImageChange} className="flex-1" />
+      </div>
       {errorMessage && <ErrorBanner message={errorMessage} />}
       {savingGoal && (
         <div className="border-t border-border pt-4">
