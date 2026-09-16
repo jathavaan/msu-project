@@ -17,12 +17,26 @@ resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   }
 }
 
-// A Microsoft.OperationsManagement/solutions "ContainerInsights(...)" resource would link this
-// workspace into the Azure Portal's dedicated AKS Insights dashboards. Deliberately left out: it
-// needs the Microsoft.OperationsManagement resource provider registered on the subscription, which
-// this one isn't, purely for a cosmetic portal integration — the omsagent addon in aks.bicep still
-// sends data to this workspace either way, just browsable as a raw workspace instead of through the
-// Insights blade. Add it back if the provider ever gets registered and the nicer dashboards matter.
+// Links the workspace into the Azure Portal's dedicated "Insights" blade for the AKS cluster.
+// Needs the Microsoft.OperationsManagement resource provider registered on the subscription — it
+// turns out that's true regardless of whether this resource is declared, since the omsagent addon
+// in aks.bicep needs it too to actually enable Container Insights. Registered via
+// `az provider register --namespace Microsoft.OperationsManagement` (safe/reversible, no cost —
+// see the PR description), so there's no reason to skip the nicer dashboard on top of that.
+resource containerInsightsSolution 'Microsoft.OperationsManagement/solutions@2015-11-01-preview' = {
+  name: 'ContainerInsights(${workspace.name})'
+  location: location
+  plan: {
+    name: 'ContainerInsights(${workspace.name})'
+    product: 'OMSGallery/ContainerInsights'
+    publisher: 'Microsoft'
+    promotionCode: ''
+  }
+  properties: {
+    workspaceResourceId: workspace.id
+  }
+}
+
 output id string = workspace.id
 output name string = workspace.name
 output customerId string = workspace.properties.customerId
