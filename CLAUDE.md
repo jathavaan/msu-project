@@ -84,11 +84,21 @@ before this template.
 `.github/workflows/infra.yaml` runs `az deployment group what-if` on every PR touching `infra/**`
 (result posted as a PR comment) and `az deployment group create` on push to `main`, gated behind the
 `infra-production` GitHub Environment so an apply always needs a manual approval click even though
-the workflow itself is unattended. Before this can run in CI, `financeone-uami` needs `Contributor`
-+ `User Access Administrator` on `rg-financeone-msu` (it currently only holds the narrow
-resource-scoped roles CI already used before this template existed) and the `infra-production`
-environment needs a required reviewer configured — both are one-time manual setup, not something a
-Bicep deployment can grant itself.
+the workflow itself is unattended. `financeone-uami` holds `Contributor` on `rg-financeone-msu` for
+this — enough for every resource type in `main.bicep`.
+
+`infra/role-assignments.bicep` is a second, separate template holding every
+`Microsoft.Authorization/roleAssignments` this project needs (the grants financeone-uami and the AKS
+kubelet identity hold on ACR/AKS/Key Vault/Storage). It is deliberately **not** wired into
+`main.bicep` or `infra.yaml`: this subscription has an ABAC condition that allows delegating
+`Contributor` but blocks delegating `User Access Administrator`, so financeone-uami can never itself
+hold `roleAssignments/write` and CI can never run it. Apply it by hand, with an account that has
+that write permission, whenever a role changes:
+```
+az deployment group create -g rg-financeone-msu -f infra/role-assignments.bicep -p infra/role-assignments.parameters.json
+```
+The `infra-production` environment needs a required reviewer configured (Settings → Environments) —
+also one-time manual setup, not something a Bicep deployment can grant itself.
 
 The Entra ID app registration for multi-user auth (a separate, later issue) is a Microsoft Graph
 object, not a native ARM/Bicep resource, and stays a documented manual `az ad app create` step

@@ -2,6 +2,12 @@
 //   az deployment group create -g rg-financeone-msu -f infra/main.bicep -p infra/main.parameters.json
 // Preview first with `what-if` in place of `create` — see .github/workflows/infra.yaml, which runs
 // that automatically on every PR touching infra/**.
+//
+// Deliberately excludes all Microsoft.Authorization/roleAssignments resources — this subscription
+// blocks delegating "User Access Administrator" to a managed identity via an ABAC condition, so
+// financeone-uami (Contributor only) can never run a template that touches role assignments. Those
+// live in role-assignments.bicep instead, applied by hand by someone with sufficient rights. See
+// that file's header comment for the full explanation.
 targetScope = 'resourceGroup'
 
 @description('Azure region for regional resources. All adopted resources already live in swedencentral; changing this would not move them.')
@@ -91,9 +97,6 @@ module identity 'modules/identity.bicep' = {
   name: 'identity'
   params: {
     location: location
-    acrName: acr.outputs.name
-    aksName: aks.outputs.name
-    keyVaultName: keyVault.outputs.name
     aksOidcIssuerUrl: aks.outputs.oidcIssuerUrl
     aksNamespace: aksNamespace
     githubMainBranchSubject: githubMainBranchSubject
@@ -105,7 +108,6 @@ module storageApp 'modules/storage-app.bicep' = {
   name: 'storage-app'
   params: {
     location: location
-    blobDataContributorPrincipalId: identity.outputs.principalId
   }
 }
 
@@ -128,7 +130,6 @@ module functions 'modules/functions.bicep' = {
     appInsightsConnectionString: appInsights.outputs.connectionString
     uamiResourceId: identity.outputs.id
     uamiClientId: identity.outputs.clientId
-    uamiPrincipalId: identity.outputs.principalId
     keyVaultUri: keyVault.outputs.vaultUri
   }
 }

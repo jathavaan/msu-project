@@ -1,6 +1,11 @@
 // New Consumption-plan Function App hosting the coupon reminder and budget alert timer functions —
 // issue #54, did not exist before this template. This provisions the empty host only; the function
 // code itself is application work tracked separately.
+//
+// AzureWebJobsStorage below uses an identity-based connection (no account key). The RBAC grants it
+// needs (Storage Blob Data Owner / Queue Data Contributor / Table Data Contributor on the Functions
+// storage account) live in ../role-assignments.bicep, not here — see that file for why. Until that
+// template is applied by hand, the Function App will exist but fail to start.
 @description('Location for the plan and function app.')
 param location string
 
@@ -15,9 +20,6 @@ param uamiResourceId string
 
 @description('Client ID of the financeone-uami identity, needed by the runtime to pick the right identity when more than one is assigned.')
 param uamiClientId string
-
-@description('Principal ID of the financeone-uami identity, used for the storage RBAC grants the identity-based AzureWebJobsStorage connection requires.')
-param uamiPrincipalId string
 
 @description('Key Vault URI, passed through so the Function App can resolve Key Vault references the same way the API does.')
 param keyVaultUri string
@@ -88,40 +90,6 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         }
       ]
     }
-  }
-}
-
-var storageBlobDataOwnerRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')
-var storageQueueDataContributorRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
-var storageTableDataContributorRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')
-
-resource blobDataOwner 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(functionsStorage.id, uamiPrincipalId, storageBlobDataOwnerRoleId)
-  scope: functionsStorage
-  properties: {
-    principalId: uamiPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: storageBlobDataOwnerRoleId
-  }
-}
-
-resource queueDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(functionsStorage.id, uamiPrincipalId, storageQueueDataContributorRoleId)
-  scope: functionsStorage
-  properties: {
-    principalId: uamiPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: storageQueueDataContributorRoleId
-  }
-}
-
-resource tableDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(functionsStorage.id, uamiPrincipalId, storageTableDataContributorRoleId)
-  scope: functionsStorage
-  properties: {
-    principalId: uamiPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: storageTableDataContributorRoleId
   }
 }
 

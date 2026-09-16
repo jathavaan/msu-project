@@ -1,10 +1,11 @@
 // New storage account for application blob data (coupons/, exports/, staged-csv/) — issue #54.
 // Did not exist before this template; nothing in the app currently reads/writes it yet.
+//
+// financeone-uami's Storage Blob Data Contributor grant on this account lives in
+// ../role-assignments.bicep, not here — see that file for why RBAC grants are kept out of the
+// CI-deployed template.
 @description('Location for the storage account.')
 param location string
-
-@description('Principal ID granted Storage Blob Data Contributor on this account (financeone-uami, shared by the API pod and the Function App).')
-param blobDataContributorPrincipalId string
 
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: 'financeoneappstorage'
@@ -42,18 +43,6 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
         publicAccess: 'None'
       }
     }
-  }
-}
-
-var storageBlobDataContributorRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
-
-resource blobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storage.id, blobDataContributorPrincipalId, storageBlobDataContributorRoleId)
-  scope: storage
-  properties: {
-    principalId: blobDataContributorPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: storageBlobDataContributorRoleId
   }
 }
 

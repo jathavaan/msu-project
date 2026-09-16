@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "uamiPrincipalId": {
+      "value": "610d8815-1786-4f11-818e-ba64952b6398"
+    },
+    "acrName": {
+      "value": "financeoneacr"
+    },
+    "aksName": {
+      "value": "financeone-aks"
+    },
+    "keyVaultName": {
+      "value": "financeone-key-vault"
+    },
+    "appStorageAccountName": {
+      "value": "financeoneappstorage"
+    },
+    "functionsStorageAccountName": {
+      "value": "financeonefuncstorage"
+    }
+  }
+}
