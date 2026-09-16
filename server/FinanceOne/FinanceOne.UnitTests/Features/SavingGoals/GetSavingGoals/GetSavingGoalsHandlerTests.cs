@@ -19,13 +19,15 @@ public class GetSavingGoalsHandlerTests
         Guid id,
         decimal targetAmount = 100_000m,
         decimal currentAmount = 0m,
-        DateOnly? targetDate = null) => new()
+        DateOnly? targetDate = null,
+        decimal? interestRate = null) => new()
     {
         Id = id,
         Name = "New Car",
         TargetAmount = targetAmount,
         CurrentAmount = currentAmount,
         TargetDate = targetDate ?? Today.AddDays(30),
+        InterestRate = interestRate,
     };
 
     private void Given(List<SavingGoal> goals, Dictionary<Guid, decimal>? contributions = null)
@@ -120,5 +122,25 @@ public class GetSavingGoalsHandlerTests
         var response = await Handler.Handle(new GetSavingGoalsQuery(), CancellationToken.None);
 
         Assert.Equal(0m, Assert.Single(response.Result!).MonthlyContribution);
+    }
+
+    [Fact]
+    public async Task Carries_The_Goals_Interest_Rate_Through_Unchanged()
+    {
+        Given([AGoal(Guid.NewGuid(), interestRate: 4.5m)]);
+
+        var response = await Handler.Handle(new GetSavingGoalsQuery(), CancellationToken.None);
+
+        Assert.Equal(4.5m, Assert.Single(response.Result!).InterestRate);
+    }
+
+    [Fact]
+    public async Task Reports_Null_Interest_Rate_When_The_Goal_Has_None()
+    {
+        Given([AGoal(Guid.NewGuid())]);
+
+        var response = await Handler.Handle(new GetSavingGoalsQuery(), CancellationToken.None);
+
+        Assert.Null(Assert.Single(response.Result!).InterestRate);
     }
 }

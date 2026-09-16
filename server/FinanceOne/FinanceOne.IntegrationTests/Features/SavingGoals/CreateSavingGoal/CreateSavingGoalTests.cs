@@ -60,6 +60,26 @@ public class CreateSavingGoalTests(MySqlFixture fixture) : IntegrationTest(fixtu
         Assert.Equal(250_000.57m, (await context.SavingGoals.SingleAsync(s => s.Id == response.Result)).TargetAmount);
     }
 
+    [Fact]
+    public async Task Persists_A_Null_Interest_Rate_When_Omitted()
+    {
+        var response = await Handler.Handle(
+            new CreateSavingGoalCommand("New Car", 250_000m, new DateOnly(2027, 6, 15)), CancellationToken.None);
+
+        await using var context = NewContext();
+        Assert.Null((await context.SavingGoals.SingleAsync(s => s.Id == response.Result)).InterestRate);
+    }
+
+    [Fact]
+    public async Task Rounds_The_Interest_Rate_To_Two_Decimal_Places()
+    {
+        var response = await Handler.Handle(
+            new CreateSavingGoalCommand("New Car", 250_000m, new DateOnly(2027, 6, 15), 4.567m), CancellationToken.None);
+
+        await using var context = NewContext();
+        Assert.Equal(4.57m, (await context.SavingGoals.SingleAsync(s => s.Id == response.Result)).InterestRate);
+    }
+
     // Nothing enforces uniqueness on a goal's name, so two goals can legitimately share one.
     [Fact]
     public async Task Allows_Two_Goals_With_The_Same_Name()

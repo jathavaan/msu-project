@@ -11,5 +11,9 @@ public sealed class CreateSavingGoalValidator : AbstractValidator<CreateSavingGo
         RuleFor(c => c.TargetDate)
             .GreaterThanOrEqualTo(_ => DateOnly.FromDateTime(timeProvider.GetUtcNow().DateTime))
             .WithMessage("Target date cannot be in the past.");
+        RuleFor(c => c.InterestRate)
+            .InclusiveBetween(0m, 100m)
+            .When(c => c.InterestRate.HasValue)
+            .WithMessage("Interest rate must be between 0 and 100.");
     }
 }

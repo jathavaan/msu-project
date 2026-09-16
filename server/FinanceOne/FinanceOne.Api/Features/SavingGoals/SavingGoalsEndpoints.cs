@@ -1,6 +1,7 @@
 using FinanceOne.Api.Features.SavingGoals.CreateSavingGoal;
 using FinanceOne.Api.Features.SavingGoals.DeleteSavingGoal;
 using FinanceOne.Api.Features.SavingGoals.GetSavingGoalById;
+using FinanceOne.Api.Features.SavingGoals.GetSavingGoalProjection;
 using FinanceOne.Api.Features.SavingGoals.GetSavingGoals;
 using FinanceOne.Api.Features.SavingGoals.UpdateSavingGoal;
 
@@ -15,6 +16,7 @@ public static class SavingGoalsEndpoints
         group.MapCreateSavingGoal();
         group.MapGetSavingGoals();
         group.MapGetSavingGoalById();
+        group.MapGetSavingGoalProjection();
         group.MapUpdateSavingGoal();
         group.MapDeleteSavingGoal();
     }

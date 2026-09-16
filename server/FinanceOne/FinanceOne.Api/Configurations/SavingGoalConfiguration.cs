@@ -18,6 +18,9 @@ public sealed class SavingGoalConfiguration : IEntityTypeConfiguration<SavingGoa
         builder.Property(s => s.CurrentAmount)
             .HasPrecision(18, 2);
 
+        builder.Property(s => s.InterestRate)
+            .HasPrecision(5, 2);
+
         // MySql.EntityFrameworkCore can't read a `date` column back into DateOnly directly
         // (MySqlDataReader.GetFieldValue<DateOnly> throws InvalidCastException — the reader only
         // produces DateTime for `date` columns). Route through DateTime explicitly so EF never

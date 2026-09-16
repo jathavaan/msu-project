@@ -90,7 +90,8 @@ public abstract class IntegrationTest : IAsyncLifetime
         string name,
         decimal targetAmount,
         DateOnly targetDate,
-        decimal currentAmount = 0m)
+        decimal currentAmount = 0m,
+        decimal? interestRate = null)
     {
         var savingGoal = new SavingGoal
         {
@@ -99,6 +100,7 @@ public abstract class IntegrationTest : IAsyncLifetime
             TargetAmount = targetAmount,
             TargetDate = targetDate,
             CurrentAmount = currentAmount,
+            InterestRate = interestRate,
         };
         Context.SavingGoals.Add(savingGoal);
         await Context.SaveChangesAsync();

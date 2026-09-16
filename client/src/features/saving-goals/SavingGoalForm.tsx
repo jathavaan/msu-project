@@ -5,6 +5,7 @@ import { Button } from '../../components/Button'
 import { ErrorBanner } from '../../components/ErrorBanner'
 import { getErrorMessage } from '../../lib/apiBaseQuery'
 import { useCreateSavingGoalMutation, useUpdateSavingGoalMutation } from './api'
+import { SavingGoalProjectionChart } from './SavingGoalProjectionChart'
 import type { SavingGoal } from './types'
 
 interface SavingGoalFormProps {
@@ -18,6 +19,7 @@ export function SavingGoalForm({ savingGoal, onDone }: SavingGoalFormProps) {
   const [targetAmount, setTargetAmount] = useState(savingGoal?.targetAmount.toString() ?? '')
   const [targetDate, setTargetDate] = useState(savingGoal?.targetDate ?? '')
   const [amountSaved, setAmountSaved] = useState(savingGoal?.amountSaved.toString() ?? '0')
+  const [interestRate, setInterestRate] = useState(savingGoal?.interestRate?.toString() ?? '')
 
   const [createSavingGoal, { isLoading: isCreating, error: createError }] = useCreateSavingGoalMutation()
   const [updateSavingGoal, { isLoading: isUpdating, error: updateError }] = useUpdateSavingGoalMutation()
@@ -27,6 +29,7 @@ export function SavingGoalForm({ savingGoal, onDone }: SavingGoalFormProps) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    const parsedInterestRate = interestRate ? Number(interestRate) : null
     try {
       if (savingGoal) {
         await updateSavingGoal({
@@ -35,9 +38,15 @@ export function SavingGoalForm({ savingGoal, onDone }: SavingGoalFormProps) {
           targetAmount: Number(targetAmount),
           targetDate,
           currentAmount: Number(amountSaved),
+          interestRate: parsedInterestRate,
         }).unwrap()
       } else {
-        await createSavingGoal({ name, targetAmount: Number(targetAmount), targetDate }).unwrap()
+        await createSavingGoal({
+          name,
+          targetAmount: Number(targetAmount),
+          targetDate,
+          interestRate: parsedInterestRate,
+        }).unwrap()
       }
       onDone()
     } catch {
@@ -75,7 +84,23 @@ export function SavingGoalForm({ savingGoal, onDone }: SavingGoalFormProps) {
           required
         />
       )}
+      <Input
+        label="Interest rate (annual %, optional)"
+        type="number"
+        min="0"
+        max="100"
+        step="0.01"
+        placeholder="e.g. 4.5"
+        value={interestRate}
+        onChange={(event) => setInterestRate(event.target.value)}
+      />
       {errorMessage && <ErrorBanner message={errorMessage} />}
+      {savingGoal && (
+        <div className="border-t border-border pt-4">
+          <p className="mb-2 text-xs font-medium text-ink-muted">Projected balance</p>
+          <SavingGoalProjectionChart savingGoalId={savingGoal.id} targetAmount={savingGoal.targetAmount} />
+        </div>
+      )}
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="secondary" onClick={onDone}>
           Cancel

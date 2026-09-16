@@ -39,13 +39,38 @@ public class UpdateSavingGoalHandlerTests
         _repository.GetById(id, Arg.Any<CancellationToken>()).Returns(savingGoal);
 
         var response = await Handler.Handle(
-            new UpdateSavingGoalCommand(id, "Used Car", 180_000m, newTargetDate, 95_000m), CancellationToken.None);
+            new UpdateSavingGoalCommand(id, "Used Car", 180_000m, newTargetDate, 95_000m, 3m), CancellationToken.None);
 
         Assert.True(response.IsSuccess);
         Assert.Equal("Used Car", savingGoal.Name);
         Assert.Equal(180_000m, savingGoal.TargetAmount);
         Assert.Equal(newTargetDate, savingGoal.TargetDate);
         Assert.Equal(95_000m, savingGoal.CurrentAmount);
+        Assert.Equal(3m, savingGoal.InterestRate);
         await _repository.Received(1).Update(Arg.Any<CancellationToken>());
+    }
+
+    // InterestRate is a full replace like every other field, so omitting it on an update clears a
+    // previously-set rate back to null rather than leaving it untouched.
+    [Fact]
+    public async Task Clears_Interest_Rate_When_Omitted()
+    {
+        var id = Guid.NewGuid();
+        var savingGoal = new SavingGoal
+        {
+            Id = id,
+            Name = "New Car",
+            TargetAmount = 250_000m,
+            CurrentAmount = 80_000m,
+            TargetDate = new DateOnly(2027, 6, 15),
+            InterestRate = 4.5m,
+        };
+        _repository.GetById(id, Arg.Any<CancellationToken>()).Returns(savingGoal);
+
+        await Handler.Handle(
+            new UpdateSavingGoalCommand(id, "New Car", 250_000m, new DateOnly(2027, 6, 15), 80_000m),
+            CancellationToken.None);
+
+        Assert.Null(savingGoal.InterestRate);
     }
 }

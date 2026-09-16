@@ -9,6 +9,8 @@ export interface SavingGoal {
   daysRemaining: number
   /** Sum of Amount across every Monthly Saving linked to this goal (0 if none). */
   monthlyContribution: number
+  /** Annual percentage, e.g. 4.5 for 4.5%. Null when the goal has no rate set. */
+  interestRate: number | null
 }
 
 /** Mirrors Features/SavingGoals/CreateSavingGoal/CreateSavingGoalCommand.cs */
@@ -16,6 +18,7 @@ export interface CreateSavingGoalRequest {
   name: string
   targetAmount: number
   targetDate: string
+  interestRate: number | null
 }
 
 /** Mirrors Features/SavingGoals/UpdateSavingGoal/UpdateSavingGoalCommand.cs — CurrentAmount adjusts AmountSaved. */
@@ -25,4 +28,19 @@ export interface UpdateSavingGoalRequest {
   targetAmount: number
   targetDate: string
   currentAmount: number
+  interestRate: number | null
+}
+
+/** Mirrors Features/SavingGoals/GetSavingGoalProjection/SavingGoalProjectionVm.cs's SavingGoalProjectionPointVm. */
+export interface SavingGoalProjectionPoint {
+  month: number
+  date: string
+  balance: number
+}
+
+/** Mirrors Features/SavingGoals/GetSavingGoalProjection/SavingGoalProjectionVm.cs. `reachDate` is
+ * null when the goal is never projected to reach its target — see that slice's README. */
+export interface SavingGoalProjection {
+  points: SavingGoalProjectionPoint[]
+  reachDate: string | null
 }
