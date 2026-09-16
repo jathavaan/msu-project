@@ -1,10 +1,11 @@
 // Adopts the existing `financeoneacr` registry, matching its current live config so this
 // deployment is a no-op the first time it runs.
 //
-// NOTE: there is a second, unused registry in the resource group named `financeone` (login server
-// financeone.azurecr.io) that predates this one and still holds a stray AcrPull grant for the AKS
-// kubelet identity. It is not referenced by any k8s manifest or workflow and is deliberately left
-// out of this template — see the PR description for cleanup options.
+// A second registry named `financeone` also exists in the resource group — a leftover from before
+// the client/server split, not referenced by any k8s manifest or workflow, still holding a stray
+// AcrPull grant for the AKS kubelet identity. It was never declared in this template on purpose;
+// removing it (registry + role assignment, both live-only, nothing here to update) is tracked in
+// issue #67.
 @description('Location for the registry. Must match the resource group location used elsewhere.')
 param location string
 
