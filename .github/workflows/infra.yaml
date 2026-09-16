@@ -1,0 +1,102 @@
+name: Infrastructure
+
+# Mirrors build-and-test.yaml's role for application code: the single definition of "what would
+# this infra change actually do". `what-if` previews every PR touching infra/** so a bad template
+# edit is visible before merge; `deploy` only runs the real `create` after merge to main, and sits
+# behind the `infra-production` GitHub Environment so it needs a manual approval click even though
+# the workflow itself is fully automated.
+#
+#   what-if  (every PR touching infra/**, and workflow_dispatch)
+#   deploy   (push to main touching infra/**, and workflow_dispatch) — gated by infra-production
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "main" ]
+    paths: [ "infra/**" ]
+  push:
+    branches: [ "main" ]
+    paths: [ "infra/**" ]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  RESOURCE_GROUP: rg-financeone-msu
+
+jobs:
+  what-if:
+    name: Preview (what-if)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # what-if is read-only — it never applies anything — but ARM still evaluates it under the
+      # same RBAC the real deployment would need, so this uses the same OIDC identity as `deploy`.
+      - name: Run what-if
+        id: whatif
+        run: |
+          {
+            echo 'result<<WHATIF_EOF'
+            az deployment group what-if \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --template-file infra/main.bicep \
+              --parameters infra/main.parameters.json \
+              --no-pretty-print \
+              || echo "what-if failed — see the job log above for the error."
+            echo 'WHATIF_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post what-if result to PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WHATIF_RESULT: ${{ steps.whatif.outputs.result }}
+        run: |
+          {
+            echo "### Infra what-if"
+            echo '```'
+            echo "$WHATIF_RESULT"
+            echo '```'
+          } > whatif-comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --body-file whatif-comment.md \
+            --edit-last --create-if-none
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # Requires the infra-production environment to exist with a required reviewer configured
+    # (Settings → Environments) — that's what turns this into a manual-approval gate. The workflow
+    # step itself is unattended.
+    environment: infra-production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy
+        run: |
+          az deployment group create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file infra/main.bicep \
+            --parameters infra/main.parameters.json

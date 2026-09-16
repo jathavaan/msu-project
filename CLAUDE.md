@@ -13,6 +13,7 @@ server/
     FinanceOne.UnitTests/        xUnit unit tests, mirrors FinanceOne.Api/Features/
     FinanceOne.IntegrationTests/ xUnit tests against a real MySQL (Testcontainers), same mirror
 k8s/       Kubernetes manifests (client/server deployment + service)
+infra/     Bicep IaC for the Azure resources in rg-financeone-msu (AKS, ACR, MySQL, Key Vault, etc.)
 docker-compose.yml   Local dev stack: MySQL db + server + client
 ```
 
@@ -68,6 +69,30 @@ Each `deploy-*` job ends with `kubectl rollout status --timeout=300s`. That is a
 both deployments have readiness probes: a pod that never becomes Ready fails the job, and because
 a rollout replaces pods only as new ones become Ready, the previous version keeps serving. On
 failure the job dumps `kubectl describe` and recent pod logs.
+
+## Infrastructure
+
+`infra/` is Bicep IaC for every Azure resource in the single `rg-financeone-msu` resource group —
+`main.bicep` composes one module per resource (or tight group of resources) under `infra/modules/`,
+parameterized by the single `main.parameters.json` (one environment, no dev/staging). Resources
+that predate this template (AKS, ACR, MySQL, Key Vault, the `financeone-uami` identity) are adopted
+by matching their live config, not recreated — a first deployment against the real resource group
+should be close to a no-op. New modules (Log Analytics, App Insights, Monitor alerts, the two
+Storage accounts, the Function App, Communication Services) provision resources that didn't exist
+before this template.
+
+`.github/workflows/infra.yaml` runs `az deployment group what-if` on every PR touching `infra/**`
+(result posted as a PR comment) and `az deployment group create` on push to `main`, gated behind the
+`infra-production` GitHub Environment so an apply always needs a manual approval click even though
+the workflow itself is unattended. Before this can run in CI, `financeone-uami` needs `Contributor`
++ `User Access Administrator` on `rg-financeone-msu` (it currently only holds the narrow
+resource-scoped roles CI already used before this template existed) and the `infra-production`
+environment needs a required reviewer configured — both are one-time manual setup, not something a
+Bicep deployment can grant itself.
+
+The Entra ID app registration for multi-user auth (a separate, later issue) is a Microsoft Graph
+object, not a native ARM/Bicep resource, and stays a documented manual `az ad app create` step
+rather than fighting the Microsoft.Graph Bicep extension.
 
 ## Tests come with the code
 

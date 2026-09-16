@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "swedencentral"
+    },
+    "tenantId": {
+      "value": "fdf88c80-36e9-45ee-a0b2-d7eb687e39eb"
+    },
+    "sshPublicKey": {
+      "value": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDYi2IORsFwLT7h9VTwnaHepvhXn3y8aH16sf7b7LseDecYeAEx7688ylAxKkTBH/fuCoBcnXqa58EIDL1iOB2T0AlrhsrsWhsXBBtK+khYZ7xK9bVjXoS3/HgQxXsAQuUkXjswjXBsXjJfGqCpyuqsySd6RhyYtkkP5i6v+hqW8aVo+YXwfwsT5t/rKsvR7Dk/RO5btQ6FvWKT+0N/PnEkzqz3D8h2YNgACt0pBqUzBqqhFMwf2KI6mM/CwFobBGl1kxx8WKRXPqcBFJFkxm2Emuo2PLWtP4mJkEBnpchKcO8jjnK7p5Z+PeH2m8QWk7o1qK3IeLBpOOWqDWgK/AC/"
+    },
+    "aadAdminObjectId": {
+      "value": "abe96bfa-1120-41a7-80f5-8e348c5ba9a7"
+    },
+    "aadAdminLogin": {
+      "value": "jathavaan.shankarr_bouvet.no#EXT#@DSFaggrupper.onmicrosoft.com"
+    },
+    "aksNamespace": {
+      "value": "default"
+    },
+    "githubMainBranchSubject": {
+      "value": "repo:jathavaan@82966828/msu-project@1333980691:ref:refs/heads/main"
+    },
+    "githubPullRequestSubject": {
+      "value": "repo:jathavaan@82966828/msu-project@1333980691:pull_request"
+    },
+    "alertEmail": {
+      "value": "jathavaan12@gmail.com"
+    }
+  }
+}
