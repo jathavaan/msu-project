@@ -89,6 +89,12 @@ discovery in `FinanceOne.Api` actually rely on them being followed consistently.
 structure, Redux Toolkit / RTK Query conventions, and a non-obvious wire-format gotcha
 (`CategoryType` serializes as a number, not a string) that isn't discoverable from the code alone.
 
+## Issues and PRs
+
+Use the repo's templates rather than freeform text: issues follow `.github/ISSUE_TEMPLATE/`
+(`bug_report.yml` or `feature_request.yml`), and PRs follow `.github/PULL_REQUEST_TEMPLATE.md`
+(link the issue with `Closes #`, fill in the type and testing checklists).
+
 ## Local dev
 
 `docker-compose.yml` at the repo root runs the full stack (MySQL, API on `:8080`, client on
