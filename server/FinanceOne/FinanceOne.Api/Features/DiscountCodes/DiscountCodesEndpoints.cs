@@ -1,8 +1,10 @@
 using FinanceOne.Api.Features.DiscountCodes.CreateDiscountCode;
 using FinanceOne.Api.Features.DiscountCodes.DeleteDiscountCode;
 using FinanceOne.Api.Features.DiscountCodes.GetDiscountCodeById;
+using FinanceOne.Api.Features.DiscountCodes.GetDiscountCodeImage;
 using FinanceOne.Api.Features.DiscountCodes.GetDiscountCodes;
 using FinanceOne.Api.Features.DiscountCodes.UpdateDiscountCode;
+using FinanceOne.Api.Features.DiscountCodes.UploadDiscountCodeImage;
 
 namespace FinanceOne.Api.Features.DiscountCodes;
 
@@ -17,5 +19,7 @@ public static class DiscountCodesEndpoints
         group.MapGetDiscountCodeById();
         group.MapUpdateDiscountCode();
         group.MapDeleteDiscountCode();
+        group.MapUploadDiscountCodeImage();
+        group.MapGetDiscountCodeImage();
     }
 }

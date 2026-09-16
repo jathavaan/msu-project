@@ -1,6 +1,8 @@
 using Azure.Core;
 using Azure.Identity;
+using Azure.Storage.Blobs;
 using FinanceOne.Api.Common;
+using FinanceOne.Api.Common.BlobStorage;
 using FinanceOne.Api.Features.BalanceForecast;
 using FinanceOne.Api.Features.Budgets;
 using FinanceOne.Api.Features.Categories;
@@ -87,6 +89,25 @@ builder.Services.AddDbContext<FinanceOneDbContext>(options =>
     options.UseMySQL(connectionString);
 });
 
+// Same production/local split as the MySQL connection above: outside Development the account is
+// reached passwordlessly via Workload Identity (financeone-uami has Storage Blob Data Contributor
+// on financeoneappstorage — see infra/role-assignments.bicep); Development points at the Azurite
+// emulator via a connection string (docker-compose's ConnectionStrings__BlobStorage, or a
+// user-secret for a bare `dotnet run`).
+builder.Services.AddSingleton(_ =>
+{
+    if (builder.Environment.IsDevelopment())
+    {
+        var connectionString = builder.Configuration.GetConnectionString("BlobStorage")!;
+        return new BlobServiceClient(connectionString);
+    }
+
+    var accountUrl = builder.Configuration["BlobStorage:AccountUrl"]
+        ?? throw new InvalidOperationException("BlobStorage:AccountUrl must be configured outside Development.");
+    return new BlobServiceClient(new Uri(accountUrl), new DefaultAzureCredential());
+});
+builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();
+
 builder.Services.AddFinanceOneServices();
 
 // Backs the two probe endpoints below. Only the database check is tagged "ready": liveness must
@@ -125,6 +146,14 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<FinanceOneDbContext>();
     await FinanceOneDbSeeder.SeedAsync(db);
+
+    // In production the containers already exist (created by infra/modules/storage-app.bicep);
+    // Azurite starts with none, so Development creates them itself on boot.
+    var blobServiceClient = scope.ServiceProvider.GetRequiredService<BlobServiceClient>();
+    foreach (var container in new[] { BlobContainers.Coupons, BlobContainers.Exports, BlobContainers.StagedCsv })
+    {
+        await blobServiceClient.GetBlobContainerClient(container).CreateIfNotExistsAsync();
+    }
 }
 
 // Kubernetes probes (see k8s/server-deployment.yaml).

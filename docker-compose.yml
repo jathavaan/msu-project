@@ -31,6 +31,15 @@ services:
       db:
         condition: service_healthy
 
+  # Local stand-in for financeoneappstorage (infra/modules/storage-app.bicep) — Azurite implements
+  # the same Blob Storage REST API, so BlobStorageService needs no Development-only code path
+  # beyond the connection string below.
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.34.0
+    command: [ "azurite-blob", "--blobHost", "0.0.0.0" ]
+    ports:
+      - "10000:10000"
+
   server:
     build:
       context: ./server/FinanceOne
@@ -38,11 +47,16 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__MySql: "Server=db;Port=3306;Database=financeone-db;Uid=financeone;Pwd=${MYSQL_PASSWORD};SslMode=Disabled;AllowPublicKeyRetrieval=True"
+      # Azurite's well-known fixed development account/key (public, same for every Azurite
+      # instance everywhere — not a secret).
+      ConnectionStrings__BlobStorage: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
     ports:
       - "8080:8080"
     depends_on:
       migrate:
         condition: service_completed_successfully
+      azurite:
+        condition: service_started
 
   client:
     build:
