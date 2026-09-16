@@ -29,7 +29,11 @@ jobs:
     name: Preview (what-if)
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    # A job-level `permissions:` block replaces the workflow-level one for that job rather than
+    # adding to it, so id-token: write has to be repeated here too — omitting it is exactly what
+    # broke azure/login the first time (it needs id-token: write to fetch the OIDC token at all).
     permissions:
+      id-token: write
       contents: read
       pull-requests: write
     steps:
