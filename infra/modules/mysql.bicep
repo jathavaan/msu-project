@@ -104,15 +104,18 @@ resource allowAzureServices 'Microsoft.DBforMySQL/flexibleServers/firewallRules@
   }
 }
 
-resource database 'Microsoft.DBforMySQL/flexibleServers/databases@2024-06-01-preview' = {
+// `existing`, not managed: the ARM REST API refuses to change a database's charset/collation once
+// created at all ("DatabaseCharsetOrCollationConflict" — the fix, per the error, is `ALTER DATABASE`
+// over a SQL connection, not this API). Declaring this as a normal resource made every deployment
+// fail on it regardless of what properties were set (or omitted), since ARM tries to reconcile the
+// full resource either way. Kept here purely so financeone-db's existence is documented; nothing
+// else in this template references it.
+resource database 'Microsoft.DBforMySQL/flexibleServers/databases@2024-06-01-preview' existing = {
   parent: mysql
   name: 'financeone-db'
-  properties: {
-    charset: 'utf8mb4'
-    collation: 'utf8mb4_0900_ai_ci'
-  }
 }
 
 output id string = mysql.id
 output name string = mysql.name
 output fullyQualifiedDomainName string = mysql.properties.fullyQualifiedDomainName
+output databaseName string = database.name
