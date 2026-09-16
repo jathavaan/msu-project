@@ -21,6 +21,9 @@ param githubMainBranchSubject string
 @description('GitHub OIDC subject for the pull_request-triggered infra what-if job. Follows the same owner-id/repo-id subject format as githubMainBranchSubject; verify against Entra if PR OIDC login fails.')
 param githubPullRequestSubject string
 
+@description('GitHub OIDC subject for the deploy job. NOT the same shape as githubMainBranchSubject — a job that sets `environment:` gets a subject of the form repo:OWNER/REPO:environment:NAME instead of the usual ref:refs/heads/BRANCH one, because the environment protection rule (not the branch) is what GitHub is asserting. Learned this the hard way when the first deploy run failed AADSTS700213.')
+param githubEnvironmentSubject string
+
 resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2024-11-30' = {
   name: 'financeone-uami'
   location: location
@@ -42,6 +45,16 @@ resource federatedPullRequest 'Microsoft.ManagedIdentity/userAssignedIdentities/
   properties: {
     issuer: 'https://token.actions.githubusercontent.com'
     subject: githubPullRequestSubject
+    audiences: [ 'api://AzureADTokenExchange' ]
+  }
+}
+
+resource federatedEnvironment 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2024-11-30' = {
+  parent: uami
+  name: 'github-actions-infra-production'
+  properties: {
+    issuer: 'https://token.actions.githubusercontent.com'
+    subject: githubEnvironmentSubject
     audiences: [ 'api://AzureADTokenExchange' ]
   }
 }

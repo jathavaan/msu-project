@@ -26,6 +26,9 @@
     "githubPullRequestSubject": {
       "value": "repo:jathavaan@82966828/msu-project@1333980691:pull_request"
     },
+    "githubEnvironmentSubject": {
+      "value": "repo:jathavaan@82966828/msu-project@1333980691:environment:infra-production"
+    },
     "alertEmail": {
       "value": "jathavaan12@gmail.com"
     }
