@@ -4,7 +4,7 @@ import { Spinner } from '../../components/Spinner'
 import { useGetBalanceForecastQuery } from '../balance-forecast/api'
 import type { BalanceEntry, BalanceForecastPoint } from '../balance-forecast/types'
 import { formatCurrency } from '../../lib/formatters'
-import { NEGATIVE_BALANCE_COLOR, POSITIVE_BALANCE_COLOR, zeroCrossingOffset } from '../../lib/balanceZone'
+import { NEGATIVE_BALANCE_COLOR, POSITIVE_BALANCE_COLOR, zeroCrossingOffset, zeroFloorDomain } from '../../lib/balanceZone'
 
 // The balance can run into six figures (unlike the other dashboard charts, which only ever plot
 // a single month's totals), so axis ticks drop the decimals `formatCurrency` always includes —
@@ -75,18 +75,15 @@ export function BalanceOverTimeChart() {
     return <p className="py-16 text-center text-sm text-ink-muted">No recurring income or expenses yet.</p>
   }
 
-  // The Y axis is pinned to the data's exact min/max (rather than recharts' default padded
-  // "auto" domain) so this offset lands exactly on the zero gridline instead of an approximation.
   const balances = points.map((point) => point.balance)
-  const rawMin = Math.min(...balances)
-  const rawMax = Math.max(...balances)
-  const yMin = rawMin === rawMax ? rawMin - 1 : rawMin
-  const yMax = rawMin === rawMax ? rawMax + 1 : rawMax
+  const [yMin, yMax] = zeroFloorDomain(balances)
+  // This offset lands exactly on the zero gridline (rather than an approximation) because it's
+  // derived from the same domain the axis actually renders.
   const offset = zeroCrossingOffset(yMin, yMax)
 
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={points} margin={{ left: 8, right: 8, top: 8, bottom: 0 }}>
+      <AreaChart data={points} margin={{ left: 8, right: 8, top: 8, bottom: 24 }}>
         <defs>
           <linearGradient id="balanceStroke" x1="0" y1="0" x2="0" y2="1">
             <stop offset={offset} stopColor={POSITIVE_BALANCE_COLOR} />
