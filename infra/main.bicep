@@ -154,3 +154,5 @@ output keyVaultUri string = keyVault.outputs.vaultUri
 output mysqlFqdn string = mysql.outputs.fullyQualifiedDomainName
 output functionAppName string = functions.outputs.name
 output acsName string = communication.outputs.acsName
+@description('Connection string of the workspace-based Application Insights resource — needed to populate the ApplicationInsights--ConnectionString Key Vault secret and the APPINSIGHTS_CONNECTION_STRING GitHub secret (see issue #50).')
+output appInsightsConnectionString string = appInsights.outputs.connectionString

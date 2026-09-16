@@ -2,6 +2,10 @@ FROM node:22-alpine AS build
 WORKDIR /app
 ARG VITE_API_BASE_URL=http://4.166.124.40
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+# Empty by default (no telemetry) — the real value is a secret, passed as a build-arg only by the
+# CI workflow (see .github/workflows/build-and-deploy.yaml), never committed here.
+ARG VITE_APPLICATIONINSIGHTS_CONNECTION_STRING=
+ENV VITE_APPLICATIONINSIGHTS_CONNECTION_STRING=$VITE_APPLICATIONINSIGHTS_CONNECTION_STRING
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .

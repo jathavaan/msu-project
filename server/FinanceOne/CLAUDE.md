@@ -442,9 +442,18 @@ by Serilog under the hood.
   `Microsoft.EntityFrameworkCore.Database.Command` to `Warning` to stop every SQL statement
   logging at Information; Development leaves it alone so SQL is visible while debugging locally.
 - **Output**: Development writes plain readable text to the console. Everywhere else writes one
-  JSON object per log event (`CompactJsonFormatter`) to stdout — no App Insights/Log Analytics
-  wiring yet, this just makes pod stdout in AKS directly parseable once something collects it,
-  without committing to a specific backend.
+  JSON object per log event (`CompactJsonFormatter`) to stdout, so pod stdout in AKS stays directly
+  parseable regardless of what else is collecting it.
+- **Application Insights**: `UseSerilog(..., writeToProviders: true)` lets the same `ILogger`
+  events also reach whatever other `ILoggerProvider`s are registered, in addition to Serilog's own
+  sinks above. When `ApplicationInsights:ConnectionString` is configured (outside Development, from
+  the `ApplicationInsights--ConnectionString` Key Vault secret), `Program.cs` registers the Azure
+  Monitor OpenTelemetry Distro (`Azure.Monitor.OpenTelemetry.AspNetCore`), which adds that kind of
+  provider plus ASP.NET Core request traces and outgoing `HttpClient` dependency spans —
+  `options.SamplingRatio = 1.0f` keeps capture at 100%, matching issue #50. Skipped entirely (no
+  registration at all) when the connection string isn't set, so Development doesn't try to phone
+  home. MySQL calls don't show up as dependency spans — `MySql.EntityFrameworkCore`'s driver
+  (Oracle's `MySql.Data`) has no OpenTelemetry `ActivitySource` of its own.
 - **Per-request correlation**: a middleware in `Program.cs` pushes `HttpContext.TraceIdentifier`
   onto Serilog's `LogContext` for the duration of each request, so every log line written while
   handling it (handler logs, `GlobalExceptionHandler`'s exception log, and the request-summary
