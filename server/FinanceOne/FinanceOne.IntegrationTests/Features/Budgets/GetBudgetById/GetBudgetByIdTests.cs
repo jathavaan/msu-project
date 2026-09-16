@@ -1,14 +1,11 @@
 using FinanceOne.Api.Features.Budgets.GetBudgetById;
 using FinanceOne.IntegrationTests.Common;
-using Microsoft.Extensions.Time.Testing;
 
 namespace FinanceOne.IntegrationTests.Features.Budgets.GetBudgetById;
 
 public class GetBudgetByIdTests(MySqlFixture fixture) : IntegrationTest(fixture)
 {
-    private readonly FakeTimeProvider _timeProvider = new(new DateTimeOffset(2026, 6, 15, 10, 0, 0, TimeSpan.Zero));
-
-    private GetBudgetByIdHandler Handler => new(new GetBudgetByIdRepository(Context, _timeProvider));
+    private GetBudgetByIdHandler Handler => new(new GetBudgetByIdRepository(Context));
 
     [Fact]
     public async Task Returns_404_When_The_Budget_Does_Not_Exist()
@@ -33,7 +30,7 @@ public class GetBudgetByIdTests(MySqlFixture fixture) : IntegrationTest(fixture)
         Assert.Equal(category.Id, response.Result.CategoryId);
         Assert.Equal("Utilities", response.Result.CategoryName);
         Assert.Equal(3_000m, response.Result.MonthlyLimit);
-        // Only the 5th has passed by the 15th; the 20th has not.
-        Assert.Equal(1_200m, response.Result.UsedThisMonth);
+        // Both count, even though the 20th has not recurred yet this month.
+        Assert.Equal(1_799m, response.Result.UsedThisMonth);
     }
 }

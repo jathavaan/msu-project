@@ -1,15 +1,11 @@
 using FinanceOne.Api.Features.Budgets.GetBudgets;
 using FinanceOne.IntegrationTests.Common;
-using Microsoft.Extensions.Time.Testing;
 
 namespace FinanceOne.IntegrationTests.Features.Budgets.GetBudgets;
 
 public class GetBudgetsTests(MySqlFixture fixture) : IntegrationTest(fixture)
 {
-    // The 15th of the month, so recurrence days on either side of "today" are both expressible.
-    private readonly FakeTimeProvider _timeProvider = new(new DateTimeOffset(2026, 6, 15, 10, 0, 0, TimeSpan.Zero));
-
-    private GetBudgetsHandler Handler => new(new GetBudgetsRepository(Context, _timeProvider));
+    private GetBudgetsHandler Handler => new(new GetBudgetsRepository(Context));
 
     [Fact]
     public async Task Returns_An_Empty_List_When_There_Are_No_Budgets()
@@ -33,11 +29,12 @@ public class GetBudgetsTests(MySqlFixture fixture) : IntegrationTest(fixture)
         Assert.Equal(12_000m, budget.MonthlyLimit);
     }
 
-    // "Used this month" sums only the recurring expenses whose day has already passed, so an
-    // expense due later in the month must not count yet. This is the rule the SQL subquery encodes
-    // and the one an in-memory provider would happily get wrong.
+    // Expenses are recurring templates, not a dated transaction log, so "used this month" sums
+    // every expense in the category regardless of which day of the month it recurs on — including
+    // one due later than today. This is the rule the SQL subquery encodes and the one an
+    // in-memory provider would happily get wrong.
     [Fact]
-    public async Task Counts_Only_Expenses_Whose_Recurrence_Day_Has_Passed()
+    public async Task Counts_All_Expenses_Regardless_Of_Recurrence_Day()
     {
         var category = await GivenCategory("Subscriptions", CategoryType.Expense);
         await GivenBudget(category.Id, 1_000m);
@@ -48,7 +45,7 @@ public class GetBudgetsTests(MySqlFixture fixture) : IntegrationTest(fixture)
         var response = await Handler.Handle(new GetBudgetsQuery(), CancellationToken.None);
 
         var budget = Assert.Single(response.Result!);
-        Assert.Equal(268m, budget.UsedThisMonth);
+        Assert.Equal(767m, budget.UsedThisMonth);
     }
 
     [Fact]

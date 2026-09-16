@@ -540,9 +540,11 @@ an in-memory list, it belongs in the unit project.
   `InitializeAsync` — **dependents before the rows they reference**, or the `Restrict` FKs reject
   the cleanup and every later test fails on leftover data.
 - **Anything that reads the clock takes a `FakeTimeProvider`** (`Microsoft.Extensions.TimeProvider.Testing`),
-  never `TimeProvider.System`. `GetSavingGoals`, `GetUpcomingPayments`, `GetBudgets`,
-  `GetDiscountCodes` and the date validators all do. Existing tests pin 2026-06-15 — mid-month, so
-  recurrence days on both sides of "today" are expressible.
+  never `TimeProvider.System`. `GetSavingGoals`, `GetUpcomingPayments`, `GetDiscountCodes` and the
+  date validators all do. Existing tests pin 2026-06-15 — mid-month, so recurrence days on both
+  sides of "today" are expressible. `GetBudgets`/`GetBudgetById` do **not** — "used this month"
+  sums every recurring expense in the category regardless of recurrence day, so there's no clock
+  dependency to fake.
 - **The `Income` entity clashes with the `Features.Income` namespace.** Inside
   `…Features.Income.*`, write `IncomeEntity` (a global using alias in each project's `Usings.cs`),
   the same way the API writes `Domain.Entites.Income`.
