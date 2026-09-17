@@ -26,6 +26,13 @@ export function categoryTypeLabel(type: CategoryType): string {
   return type === CategoryType.Income ? 'Income' : 'Expense'
 }
 
+const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' })
+
+/** `month` is 1-12, as returned by GetCategorySpendTrend's MonthlySpendVm. */
+export function formatMonthLabel(year: number, month: number): string {
+  return monthFormatter.format(new Date(year, month - 1, 1))
+}
+
 export function daysUntil(isoDate: string): number {
   const target = new Date(`${isoDate}T00:00:00`)
   const today = new Date()

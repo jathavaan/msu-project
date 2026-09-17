@@ -15,6 +15,8 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 
+// Spend Trends (issue #49) is disabled for now — its page/nav entry are deliberately left out of
+// this list rather than deleted; see the SpendTrendsPage import commented out in router.tsx.
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/income', label: 'Income', icon: TrendingUp },
