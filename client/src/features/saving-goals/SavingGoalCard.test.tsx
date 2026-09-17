@@ -17,7 +17,6 @@ const savingGoal: SavingGoal = {
   daysRemaining: 300,
   monthlyContribution: 5_000,
   interestRate: null,
-  imageUrl: null,
 }
 
 function stubProjection(reachDate: string | null) {
@@ -81,19 +80,5 @@ describe('SavingGoalCard', () => {
 
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 'g1' }))
     expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 'g1' }))
-  })
-
-  it('shows a placeholder icon when no image has been uploaded', () => {
-    stubProjection('2027-01-01')
-    renderCard()
-
-    expect(screen.queryByAltText('')).not.toBeInTheDocument()
-  })
-
-  it('shows the uploaded image, resolved against the API base URL, when one is set', () => {
-    stubProjection('2027-01-01')
-    renderCard({ imageUrl: '/api/saving-goals/g1/image' })
-
-    expect(screen.getByAltText('')).toHaveAttribute('src', `${API_URL}/saving-goals/g1/image`)
   })
 })

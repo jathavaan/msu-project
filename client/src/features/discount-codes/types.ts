@@ -11,7 +11,6 @@ export interface DiscountCode {
 export interface CreateDiscountCodeRequest {
   storeName: string
   codeText: string | null
-  codeImageUrl: string | null
   expiryDate: string
 }
 

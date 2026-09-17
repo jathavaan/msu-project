@@ -12,7 +12,7 @@ public class UpdateDiscountCodeTests(MySqlFixture fixture) : IntegrationTest(fix
     public async Task Returns_404_When_The_Discount_Code_Does_Not_Exist()
     {
         var response = await Handler.Handle(
-            new UpdateDiscountCodeCommand(Guid.NewGuid(), "Rema 1000", null, null, new DateOnly(2026, 12, 31)),
+            new UpdateDiscountCodeCommand(Guid.NewGuid(), "Rema 1000", null, new DateOnly(2026, 12, 31)),
             CancellationToken.None);
 
         Assert.Equal(StatusCodes.Status404NotFound, response.ErrorCode);
@@ -25,7 +25,7 @@ public class UpdateDiscountCodeTests(MySqlFixture fixture) : IntegrationTest(fix
         var newExpiry = new DateOnly(2027, 3, 1);
 
         var response = await Handler.Handle(
-            new UpdateDiscountCodeCommand(discountCode.Id, "Kiwi", "KIWI10", "https://example.test/kiwi.png", newExpiry),
+            new UpdateDiscountCodeCommand(discountCode.Id, "Kiwi", "KIWI10", newExpiry),
             CancellationToken.None);
 
         Assert.True(response.IsSuccess);
@@ -34,28 +34,41 @@ public class UpdateDiscountCodeTests(MySqlFixture fixture) : IntegrationTest(fix
         var saved = await context.DiscountCodes.SingleAsync(d => d.Id == discountCode.Id);
         Assert.Equal("Kiwi", saved.StoreName);
         Assert.Equal("KIWI10", saved.CodeText);
-        Assert.Equal("https://example.test/kiwi.png", saved.CodeImageUrl);
         Assert.Equal(newExpiry, saved.ExpiryDate);
     }
 
-    // The optional columns are assigned unconditionally, so sending null genuinely clears a stored
-    // code rather than leaving the old value behind.
+    // CodeImageUrl is untouched by this handler — only Upload Discount Code Image sets it.
     [Fact]
-    public async Task Clears_The_Optional_Fields_When_Sent_As_Null()
+    public async Task Leaves_The_Image_Url_Unchanged()
     {
         var discountCode = await GivenDiscountCode(
             "Rema 1000",
             new DateOnly(2026, 12, 31),
             codeText: "SAVE20",
-            codeImageUrl: "https://example.test/code.png");
+            codeImageUrl: "/api/discount-codes/existing/image");
 
         await Handler.Handle(
-            new UpdateDiscountCodeCommand(discountCode.Id, "Rema 1000", null, null, new DateOnly(2026, 12, 31)),
+            new UpdateDiscountCodeCommand(discountCode.Id, "Kiwi", "KIWI10", new DateOnly(2027, 3, 1)),
+            CancellationToken.None);
+
+        await using var context = NewContext();
+        var saved = await context.DiscountCodes.SingleAsync(d => d.Id == discountCode.Id);
+        Assert.Equal("/api/discount-codes/existing/image", saved.CodeImageUrl);
+    }
+
+    // CodeText is assigned unconditionally, so sending null genuinely clears a stored code rather
+    // than leaving the old value behind.
+    [Fact]
+    public async Task Clears_CodeText_When_Sent_As_Null()
+    {
+        var discountCode = await GivenDiscountCode("Rema 1000", new DateOnly(2026, 12, 31), codeText: "SAVE20");
+
+        await Handler.Handle(
+            new UpdateDiscountCodeCommand(discountCode.Id, "Rema 1000", null, new DateOnly(2026, 12, 31)),
             CancellationToken.None);
 
         await using var context = NewContext();
         var saved = await context.DiscountCodes.SingleAsync(d => d.Id == discountCode.Id);
         Assert.Null(saved.CodeText);
-        Assert.Null(saved.CodeImageUrl);
     }
 }

@@ -10,7 +10,6 @@ public sealed class CreateDiscountCodeHandler(ICreateDiscountCodeRepository repo
             Id = Guid.NewGuid(),
             StoreName = request.StoreName,
             CodeText = request.CodeText,
-            CodeImageUrl = request.CodeImageUrl,
             ExpiryDate = request.ExpiryDate
         };
         var id = await repository.Add(discountCode, cancellationToken);
