@@ -36,10 +36,6 @@ internal static class TransaksjonslisteCsvParser
     private const string TransferType = "Overføring";
     private const string OwnAccountMarker = "egen konto";
 
-    // Beløp inn/Beløp ut use Norwegian decimal formatting (comma decimal separator, optional
-    // space as a thousands separator, e.g. "1 500,00").
-    private static readonly CultureInfo AmountCulture = CultureInfo.GetCultureInfo("nb-NO");
-
     public static ParsedCsv Parse(Stream csv)
     {
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -105,7 +101,9 @@ internal static class TransaksjonslisteCsvParser
         DateOnly.TryParseExact(raw?.Trim(), "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 
     // Exactly one of Beløp inn/Beløp ut is populated per row. Beløp inn is a credit (money in,
-    // positive); Beløp ut is a debit (money out, stored as negative).
+    // positive); Beløp ut is a debit (money out, stored as negative) — regardless of whether this
+    // particular export already signs it negative itself (see TryParseAmount below), -Math.Abs
+    // normalizes it either way instead of assuming one sign convention over the other.
     private static bool TryResolveAmount(string? amountIn, string? amountOut, out decimal amount)
     {
         var hasIn = !string.IsNullOrWhiteSpace(amountIn);
@@ -117,13 +115,42 @@ internal static class TransaksjonslisteCsvParser
             return false;
         }
 
-        if (!decimal.TryParse(hasIn ? amountIn : amountOut, NumberStyles.Number, AmountCulture, out var value))
+        if (!TryParseAmount(hasIn ? amountIn : amountOut, out var value))
         {
             amount = 0m;
             return false;
         }
 
-        amount = hasIn ? value : -value;
+        amount = hasIn ? value : -Math.Abs(value);
         return true;
+    }
+
+    // Real exports of this same bank feature have shown up in two different number formats: comma
+    // decimal with an optional "." thousands separator and an unsigned Beløp ut magnitude (e.g.
+    // "1.500,00"), and plain period-decimal with Beløp ut already signed negative (e.g. "-568.65",
+    // seen on an English-locale export — see issue #96). Parsing against
+    // CultureInfo.GetCultureInfo("nb-NO") handles neither: its NumberGroupSeparator is U+00A0 (a
+    // non-breaking space), not ".", so it rejects the first format outright, and naively stripping
+    // "." to work around that corrupts the second format's decimal point instead (e.g. "-568.65"
+    // -> "-56865"). Whichever of "." / "," appears *last* is the actual decimal separator — a
+    // thousands separator, when present at all, always appears before it — so that's used to
+    // decide which one to strip rather than assuming either format up front.
+    private static bool TryParseAmount(string? raw, out decimal value)
+    {
+        if (raw is null)
+        {
+            value = 0m;
+            return false;
+        }
+
+        var trimmed = raw.Trim();
+        var lastDot = trimmed.LastIndexOf('.');
+        var lastComma = trimmed.LastIndexOf(',');
+
+        var normalized = lastComma > lastDot
+            ? trimmed.Replace(".", string.Empty).Replace(',', '.')
+            : trimmed.Replace(",", string.Empty);
+
+        return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out value);
     }
 }
