@@ -11,8 +11,17 @@
 //   az deployment group create -g rg-financeone-msu -f infra/role-assignments.bicep -p infra/role-assignments.parameters.json
 //
 // The first four grants already exist (created by hand before this template) — this adopts them by
-// name so re-running is a no-op. The last four are new, for the Storage/Functions modules in
-// main.bicep, and must be applied before the Function App can actually reach its storage account.
+// name so re-running is a no-op. The fifth is new, for storage-app.bicep.
+//
+// NOTE (issue #100): the three grants that used to live here for storage-functions.bicep's
+// financeonefuncstorage account (Blob Data Owner / Queue Data Contributor / Table Data Contributor)
+// were removed when that module was deleted as unused. Removing a roleAssignments resource from
+// this file does NOT revoke it on Azure — this template deploys with `az deployment group create`
+// (Incremental, same as main.bicep), and even a Complete-mode deploy wouldn't touch it, since
+// Complete mode doesn't affect Microsoft.Authorization/roleAssignments (see #81/#83). Revoke those
+// three by hand once financeonefuncstorage itself is deleted:
+//   az role assignment list --scope <financeonefuncstorage resource ID> -o table
+//   az role assignment delete --ids <id>  (for each of the three)
 @description('Principal ID of financeone-uami.')
 param uamiPrincipalId string
 
@@ -27,9 +36,6 @@ param keyVaultName string
 
 @description('Name of the app storage account (storage-app.bicep).')
 param appStorageAccountName string
-
-@description('Name of the Functions storage account (storage-functions.bicep).')
-param functionsStorageAccountName string
 
 resource acr 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' existing = {
   name: acrName
@@ -47,18 +53,11 @@ resource appStorage 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
   name: appStorageAccountName
 }
 
-resource functionsStorage 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
-  name: functionsStorageAccountName
-}
-
 var acrPushRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8311e382-0749-4cb8-b61a-304f252e45ec')
 var acrPullRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 var aksClusterUserRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4abbcc35-e782-43d8-92c5-2d3f1bd2253f')
 var keyVaultSecretsUserRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
 var storageBlobDataContributorRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
-var storageBlobDataOwnerRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')
-var storageQueueDataContributorRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
-var storageTableDataContributorRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')
 
 // --- Pre-existing grants (adopted by their real GUID names so this is a no-op update) ---
 
@@ -105,7 +104,7 @@ resource kubeletAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
-// --- New grants, needed once storage-app.bicep / functions.bicep have been deployed ---
+// --- New grant, needed once storage-app.bicep has been deployed ---
 
 resource blobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(appStorage.id, uamiPrincipalId, storageBlobDataContributorRoleId)
@@ -114,35 +113,5 @@ resource blobDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01
     principalId: uamiPrincipalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: storageBlobDataContributorRoleId
-  }
-}
-
-resource blobDataOwner 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(functionsStorage.id, uamiPrincipalId, storageBlobDataOwnerRoleId)
-  scope: functionsStorage
-  properties: {
-    principalId: uamiPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: storageBlobDataOwnerRoleId
-  }
-}
-
-resource queueDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(functionsStorage.id, uamiPrincipalId, storageQueueDataContributorRoleId)
-  scope: functionsStorage
-  properties: {
-    principalId: uamiPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: storageQueueDataContributorRoleId
-  }
-}
-
-resource tableDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(functionsStorage.id, uamiPrincipalId, storageTableDataContributorRoleId)
-  scope: functionsStorage
-  properties: {
-    principalId: uamiPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: storageTableDataContributorRoleId
   }
 }

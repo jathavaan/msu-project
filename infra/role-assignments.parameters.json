@@ -16,9 +16,6 @@
     },
     "appStorageAccountName": {
       "value": "financeoneappstorage"
-    },
-    "functionsStorageAccountName": {
-      "value": "financeonefuncstorage"
     }
   }
 }

@@ -94,9 +94,8 @@ failure the job dumps `kubectl describe` and recent pod logs.
 parameterized by the single `main.parameters.json` (one environment, no dev/staging). Resources
 that predate this template (AKS, ACR, MySQL, Key Vault, the `financeone-uami` identity) are adopted
 by matching their live config, not recreated — a first deployment against the real resource group
-should be close to a no-op. New modules (Log Analytics, App Insights, Monitor alerts, the two
-Storage accounts, the Function App, Communication Services) provision resources that didn't exist
-before this template.
+should be close to a no-op. New modules (Log Analytics, App Insights, Monitor alerts, the app
+Storage account) provision resources that didn't exist before this template.
 
 `.github/workflows/infra.yaml` is a reusable workflow (`on: workflow_call`, same shape as
 `build-and-test.yaml`) that runs `az deployment group what-if` and posts the result as a PR
