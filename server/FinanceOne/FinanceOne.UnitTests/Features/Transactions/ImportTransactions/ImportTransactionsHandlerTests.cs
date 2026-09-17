@@ -182,6 +182,38 @@ public class ImportTransactionsHandlerTests
             Arg.Any<CancellationToken>());
     }
 
+    // Real bank exports use "." as a thousands separator (e.g. "1.500,00"), which .NET's nb-NO
+    // culture itself doesn't accept (its NumberGroupSeparator is a non-breaking space) — see
+    // issue #96. This pins the parser's own normalization down instead of relying on that culture.
+    [Fact]
+    public async Task Imports_A_Debit_Row_With_A_Thousands_Separator_In_The_Amount()
+    {
+        var csv = BuildCsv("01.06.2026;Rent;Husleie;;;1.500,00;Bokført");
+
+        var response = await Handler.Handle(new ImportTransactionsCommand(csv, "june.csv", 100), CancellationToken.None);
+
+        Assert.True(response.IsSuccess);
+        Assert.Equal(1, response.Result!.ImportedCount);
+        Assert.Equal(0, response.Result.InvalidRowCount);
+        await _repository.Received(1).AddRange(
+            Arg.Is<List<Transaction>>(t => t.Count == 1 && t[0].Amount == -1_500.00m),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Imports_A_Credit_Row_With_A_Thousands_Separator_In_The_Amount()
+    {
+        var csv = BuildCsv("15.06.2026;Salary;Lønn;;12.345,67;;Bokført");
+
+        var response = await Handler.Handle(new ImportTransactionsCommand(csv, "june.csv", 100), CancellationToken.None);
+
+        Assert.True(response.IsSuccess);
+        Assert.Equal(0, response.Result!.InvalidRowCount);
+        await _repository.Received(1).AddRange(
+            Arg.Is<List<Transaction>>(t => t.Count == 1 && t[0].Amount == 12_345.67m),
+            Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task Counts_A_Row_With_Both_Amount_Columns_Populated_As_Invalid()
     {

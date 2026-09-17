@@ -36,10 +36,6 @@ internal static class TransaksjonslisteCsvParser
     private const string TransferType = "Overføring";
     private const string OwnAccountMarker = "egen konto";
 
-    // Beløp inn/Beløp ut use Norwegian decimal formatting (comma decimal separator, optional
-    // space as a thousands separator, e.g. "1 500,00").
-    private static readonly CultureInfo AmountCulture = CultureInfo.GetCultureInfo("nb-NO");
-
     public static ParsedCsv Parse(Stream csv)
     {
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -117,7 +113,7 @@ internal static class TransaksjonslisteCsvParser
             return false;
         }
 
-        if (!decimal.TryParse(hasIn ? amountIn : amountOut, NumberStyles.Number, AmountCulture, out var value))
+        if (!TryParseNorwegianAmount(hasIn ? amountIn : amountOut, out var value))
         {
             amount = 0m;
             return false;
@@ -125,5 +121,24 @@ internal static class TransaksjonslisteCsvParser
 
         amount = hasIn ? value : -value;
         return true;
+    }
+
+    // Beløp inn/Beløp ut use Norwegian decimal formatting: comma decimal separator, with a "."
+    // thousands separator in real bank exports (e.g. "1.500,00"). Parsing directly against
+    // CultureInfo.GetCultureInfo("nb-NO") doesn't work: .NET's nb-NO NumberGroupSeparator is
+    // U+00A0 (a non-breaking space), not ".", so decimal.TryParse rejected "1.500,00" under that
+    // culture and every amount of 1000 or more was silently dropped as an invalid row (issue #96).
+    // Stripping "." and parsing the remaining comma-decimal number with InvariantCulture instead
+    // sidesteps that mismatch entirely.
+    private static bool TryParseNorwegianAmount(string? raw, out decimal value)
+    {
+        if (raw is null)
+        {
+            value = 0m;
+            return false;
+        }
+
+        var normalized = raw.Trim().Replace(".", string.Empty).Replace(',', '.');
+        return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out value);
     }
 }
