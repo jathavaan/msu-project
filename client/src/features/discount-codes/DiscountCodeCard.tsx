@@ -1,5 +1,6 @@
 import { Pencil, Trash2, Ticket } from 'lucide-react'
 import { Button } from '../../components/Button'
+import { resolveApiUrl } from '../../lib/apiBaseQuery'
 import { formatDate, daysUntil } from '../../lib/formatters'
 import type { DiscountCode } from './types'
 
@@ -19,7 +20,7 @@ export function DiscountCodeCard({ discountCode, onEdit, onDelete }: DiscountCod
       <div className="mb-3 flex items-start justify-between">
         <div className="flex items-center gap-2">
           {discountCode.codeImageUrl ? (
-            <img src={discountCode.codeImageUrl} alt="" className="h-9 w-9 rounded-lg object-cover" />
+            <img src={resolveApiUrl(discountCode.codeImageUrl)} alt="" className="h-9 w-9 rounded-lg object-cover" />
           ) : (
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-page text-ink-faint">
               <Ticket size={16} />

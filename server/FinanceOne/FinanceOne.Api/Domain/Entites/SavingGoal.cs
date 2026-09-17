@@ -15,7 +15,5 @@ public sealed class SavingGoal
     // GetSavingGoalProjection. Null/0 means no interest — projection is contribution-only.
     public decimal? InterestRate { get; set; }
 
-    public string? ImageUrl { get; set; }
-
     public ICollection<MonthlySaving> MonthlySavings { get; init; } = [];
 }

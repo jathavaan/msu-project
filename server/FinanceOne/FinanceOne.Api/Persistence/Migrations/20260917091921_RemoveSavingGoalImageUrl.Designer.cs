@@ -3,6 +3,7 @@ using System;
 using FinanceOne.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FinanceOne.Api.Persistence.Migrations
 {
     [DbContext(typeof(FinanceOneDbContext))]
-    partial class FinanceOneDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917091921_RemoveSavingGoalImageUrl")]
+    partial class RemoveSavingGoalImageUrl
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -38,26 +41,6 @@ namespace FinanceOne.Api.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Budgets");
-                });
-
-            modelBuilder.Entity("FinanceOne.Api.Domain.Entites.CategorizationRule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("CategoryId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("Keyword")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
-
-                    b.ToTable("CategorizationRules");
                 });
 
             modelBuilder.Entity("FinanceOne.Api.Domain.Entites.Category", b =>
@@ -213,57 +196,11 @@ namespace FinanceOne.Api.Persistence.Migrations
                     b.ToTable("SavingGoals");
                 });
 
-            modelBuilder.Entity("FinanceOne.Api.Domain.Entites.Transaction", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<Guid?>("CategoryId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("date");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Hash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("varchar(64)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
-
-                    b.HasIndex("Hash")
-                        .IsUnique();
-
-                    b.ToTable("Transactions");
-                });
-
             modelBuilder.Entity("FinanceOne.Api.Domain.Entites.Budget", b =>
                 {
                     b.HasOne("FinanceOne.Api.Domain.Entites.Category", "Category")
                         .WithOne("Budget")
                         .HasForeignKey("FinanceOne.Api.Domain.Entites.Budget", "CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Category");
-                });
-
-            modelBuilder.Entity("FinanceOne.Api.Domain.Entites.CategorizationRule", b =>
-                {
-                    b.HasOne("FinanceOne.Api.Domain.Entites.Category", "Category")
-                        .WithMany("CategorizationRules")
-                        .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -303,27 +240,13 @@ namespace FinanceOne.Api.Persistence.Migrations
                     b.Navigation("SavingGoal");
                 });
 
-            modelBuilder.Entity("FinanceOne.Api.Domain.Entites.Transaction", b =>
-                {
-                    b.HasOne("FinanceOne.Api.Domain.Entites.Category", "Category")
-                        .WithMany("Transactions")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Category");
-                });
-
             modelBuilder.Entity("FinanceOne.Api.Domain.Entites.Category", b =>
                 {
                     b.Navigation("Budget");
 
-                    b.Navigation("CategorizationRules");
-
                     b.Navigation("Expenses");
 
                     b.Navigation("Incomes");
-
-                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("FinanceOne.Api.Domain.Entites.SavingGoal", b =>

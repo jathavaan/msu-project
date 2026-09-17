@@ -24,7 +24,7 @@ public class GetSavingGoalByIdTests(MySqlFixture fixture) : IntegrationTest(fixt
     public async Task Returns_The_Goal_With_Its_Derived_Fields()
     {
         var goal = await GivenSavingGoal(
-            "New Car", 250_000m, Today.AddDays(90), currentAmount: 80_000m, interestRate: 4.5m, imageUrl: "/api/saving-goals/g1/image");
+            "New Car", 250_000m, Today.AddDays(90), currentAmount: 80_000m, interestRate: 4.5m);
         await GivenMonthlySaving(goal.Id, "Car Fund", 5_000m, 25);
 
         var response = await Handler.Handle(new GetSavingGoalByIdQuery(goal.Id), CancellationToken.None);
@@ -37,7 +37,6 @@ public class GetSavingGoalByIdTests(MySqlFixture fixture) : IntegrationTest(fixt
         Assert.Equal(90, vm.DaysRemaining);
         Assert.Equal(5_000m, vm.MonthlyContribution);
         Assert.Equal(4.5m, vm.InterestRate);
-        Assert.Equal("/api/saving-goals/g1/image", vm.ImageUrl);
     }
 
     // The total comes from SumAsync over a nullable projection, which returns null (not zero) when

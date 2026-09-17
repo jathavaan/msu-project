@@ -1,7 +1,6 @@
-import { Pencil, Trash2, Image as ImageIcon } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../../components/Button'
 import { ProgressBar } from '../../components/ProgressBar'
-import { resolveApiUrl } from '../../lib/apiBaseQuery'
 import { formatCurrency, formatDate } from '../../lib/formatters'
 import { useGetSavingGoalProjectionQuery } from './api'
 import { formatReachDateMessage } from './formatReachDate'
@@ -22,18 +21,9 @@ export function SavingGoalCard({ savingGoal, onEdit, onDelete }: SavingGoalCardP
   return (
     <div className="rounded-xl border border-border p-4">
       <div className="mb-2 flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          {savingGoal.imageUrl ? (
-            <img src={resolveApiUrl(savingGoal.imageUrl)} alt="" className="h-9 w-9 rounded-lg object-cover" />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-page text-ink-faint">
-              <ImageIcon size={16} />
-            </div>
-          )}
-          <div>
-            <p className="text-sm font-semibold text-ink">{savingGoal.name}</p>
-            <p className="text-xs text-ink-muted">Target: {formatDate(savingGoal.targetDate)}</p>
-          </div>
+        <div>
+          <p className="text-sm font-semibold text-ink">{savingGoal.name}</p>
+          <p className="text-xs text-ink-muted">Target: {formatDate(savingGoal.targetDate)}</p>
         </div>
         <div className="flex gap-1">
           <Button variant="ghost" size="sm" onClick={() => onEdit(savingGoal)}>

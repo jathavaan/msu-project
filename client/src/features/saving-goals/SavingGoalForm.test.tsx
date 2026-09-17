@@ -17,7 +17,6 @@ const savingGoal: SavingGoal = {
   daysRemaining: 300,
   monthlyContribution: 5_000,
   interestRate: 4.5,
-  imageUrl: null,
 }
 
 /** Editing renders the projection chart, which every edit-mode test must stub. */
@@ -165,82 +164,5 @@ describe('SavingGoalForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
     expect(onDone).toHaveBeenCalledOnce()
-  })
-
-  // jsdom has no real createObjectURL; vitest's own polyfill for it only understands jsdom's own
-  // Blob, which the preview receives fine outside these tests. Stubbed here only because these
-  // tests also exercise the upload request, which needs src/test/fileShim.ts's multipart encoding
-  // to survive undici's brand-checking — the two aren't related, but both touch the same file.
-  function stubCreateObjectUrl() {
-    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview')
-  }
-
-  // request.formData() hits an unrelated bug in this environment's undici when re-parsing a body
-  // fileShim.ts had to hand-encode (see that file), so the raw multipart text is asserted on
-  // directly instead — sufficient to prove the file's name and content made it into the request.
-  it('uploads the selected image after creating a new goal', async () => {
-    stubCreateObjectUrl()
-    server.use(
-      http.post(`${API_URL}/saving-goals`, () => HttpResponse.json('new-id', { status: 201 })),
-    )
-    let uploadedBody: string | null = null
-    server.use(
-      http.put(`${API_URL}/saving-goals/new-id/image`, async ({ request }) => {
-        uploadedBody = await request.text()
-        return new HttpResponse(null, { status: 204 })
-      }),
-    )
-    const onDone = vi.fn()
-    renderWithStore(<SavingGoalForm onDone={onDone} />)
-    const file = new File(['car'], 'car.png', { type: 'image/png' })
-
-    await userEvent.type(screen.getByLabelText('Name'), 'Holiday')
-    await userEvent.type(screen.getByLabelText('Target amount'), '30000')
-    await userEvent.type(screen.getByLabelText('Target date'), '2027-06-15')
-    await userEvent.upload(screen.getByLabelText('Image (optional)'), file)
-    await userEvent.click(screen.getByRole('button', { name: 'Create goal' }))
-
-    await waitFor(() => expect(onDone).toHaveBeenCalledOnce())
-    expect(uploadedBody).toContain('filename="car.png"')
-    expect(uploadedBody).toContain('car')
-  })
-
-  it('uploads the selected image after editing an existing goal', async () => {
-    stubCreateObjectUrl()
-    stubProjection()
-    server.use(
-      http.put(`${API_URL}/saving-goals/g1`, () => new HttpResponse(null, { status: 204 })),
-    )
-    let uploadedBody: string | null = null
-    server.use(
-      http.put(`${API_URL}/saving-goals/g1/image`, async ({ request }) => {
-        uploadedBody = await request.text()
-        return new HttpResponse(null, { status: 204 })
-      }),
-    )
-    const onDone = vi.fn()
-    renderWithStore(<SavingGoalForm savingGoal={savingGoal} onDone={onDone} />)
-    const file = new File(['car'], 'car.png', { type: 'image/png' })
-
-    await userEvent.upload(screen.getByLabelText('Image (optional)'), file)
-    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
-
-    await waitFor(() => expect(onDone).toHaveBeenCalledOnce())
-    expect(uploadedBody).toContain('filename="car.png"')
-  })
-
-  // No file selected means no multipart request at all — MSW's onUnhandledRequest: 'error' fails
-  // the test if the form tried to hit the image endpoint anyway.
-  it('does not upload an image when none is selected', async () => {
-    stubProjection()
-    server.use(
-      http.put(`${API_URL}/saving-goals/g1`, () => new HttpResponse(null, { status: 204 })),
-    )
-    const onDone = vi.fn()
-    renderWithStore(<SavingGoalForm savingGoal={savingGoal} onDone={onDone} />)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
-
-    await waitFor(() => expect(onDone).toHaveBeenCalledOnce())
   })
 })

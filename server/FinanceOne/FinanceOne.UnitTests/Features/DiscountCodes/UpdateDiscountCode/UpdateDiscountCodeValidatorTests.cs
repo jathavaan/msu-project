@@ -12,7 +12,7 @@ public class UpdateDiscountCodeValidatorTests
         new(new FakeTimeProvider(new DateTimeOffset(2026, 6, 15, 10, 0, 0, TimeSpan.Zero)));
 
     private static UpdateDiscountCodeCommand Valid() =>
-        new(Guid.NewGuid(), "Rema 1000", "SAVE20", null, Today.AddDays(30));
+        new(Guid.NewGuid(), "Rema 1000", "SAVE20", Today.AddDays(30));
 
     [Fact]
     public void Id_Is_Required()

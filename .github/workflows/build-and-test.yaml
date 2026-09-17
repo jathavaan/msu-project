@@ -10,8 +10,21 @@ name: Build and Test
 #
 # The two build jobs run in parallel with each other, and each set of tests fans out in parallel
 # once its build has proven the code compiles.
+#
+# run-server/run-client default to true so build-and-deploy.yaml's call (which never passes them)
+# always gets the full suite before shipping — only pull-request.yaml passes false for the side
+# that a PR's changed paths don't touch, for faster PR feedback.
 on:
   workflow_call:
+    inputs:
+      run-server:
+        description: Run the server build/test jobs.
+        type: boolean
+        default: true
+      run-client:
+        description: Run the client build/test jobs.
+        type: boolean
+        default: true
 
 # checks:write is what lets dorny/test-reporter publish results as a check run with per-failure
 # annotations. Each caller grants it on the job that calls this workflow, never workflow-wide.
@@ -27,6 +40,7 @@ jobs:
   build-server:
     name: Build server
     runs-on: ubuntu-latest
+    if: inputs.run-server
     defaults:
       run:
         working-directory: server/FinanceOne
@@ -58,6 +72,7 @@ jobs:
     name: Test server (unit)
     runs-on: ubuntu-latest
     needs: build-server
+    if: inputs.run-server
     defaults:
       run:
         working-directory: server/FinanceOne
@@ -110,6 +125,7 @@ jobs:
     name: Test server (integration)
     runs-on: ubuntu-latest
     needs: build-server
+    if: inputs.run-server
     defaults:
       run:
         working-directory: server/FinanceOne
@@ -159,6 +175,7 @@ jobs:
   build-client:
     name: Build client
     runs-on: ubuntu-latest
+    if: inputs.run-client
     defaults:
       run:
         working-directory: client
@@ -188,6 +205,7 @@ jobs:
     name: Test client
     runs-on: ubuntu-latest
     needs: build-client
+    if: inputs.run-client
     defaults:
       run:
         working-directory: client
