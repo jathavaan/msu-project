@@ -233,7 +233,8 @@ app.MapExpensesEndpoints();
 app.MapIncomeEndpoints();
 app.MapMonthlySavingsEndpoints();
 app.MapSavingGoalsEndpoints();
-app.MapSpendTrendsEndpoints();
+// Disabled for now (kept, not removed) — see issue #49. Uncomment to re-enable.
+// app.MapSpendTrendsEndpoints();
 app.MapTransactionsEndpoints();
 app.MapUpcomingPaymentsEndpoints();
 

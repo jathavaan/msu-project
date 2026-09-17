@@ -10,17 +10,17 @@ import {
   Ticket,
   CalendarClock,
   CircleDollarSign,
-  LineChart,
   X,
 } from 'lucide-react'
 import clsx from 'clsx'
 
+// Spend Trends (issue #49) is disabled for now — its page/nav entry are deliberately left out of
+// this list rather than deleted; see the SpendTrendsPage import commented out in router.tsx.
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/income', label: 'Income', icon: TrendingUp },
   { to: '/expenses', label: 'Expenses', icon: TrendingDown },
   { to: '/budgets', label: 'Budgets', icon: Wallet },
-  { to: '/spend-trends', label: 'Spend Trends', icon: LineChart },
   { to: '/saving-goals', label: 'Saving Goals', icon: Target },
   { to: '/monthly-savings', label: 'Monthly Savings', icon: PiggyBank },
   { to: '/upcoming-payments', label: 'Upcoming Payments', icon: CalendarClock },
