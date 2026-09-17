@@ -69,6 +69,30 @@ func markdownPart(position object, content string) object => {
   }
 }
 
+var parts = [
+  markdownPart({ x: 0, y: 0, colSpan: 12, rowSpan: 1 }, '# FinanceOne Overview\nAPI health, AKS node pressure, and MySQL pressure — the same signals monitor-alerts.bicep pages on.')
+
+  markdownPart({ x: 0, y: 1, colSpan: 12, rowSpan: 1 }, '## API / Application Insights')
+  metricsChartPart({ x: 0, y: 2, colSpan: 6, rowSpan: 4 }, appInsightsResourceId, 'requests/count')
+  metricsChartPart({ x: 6, y: 2, colSpan: 6, rowSpan: 4 }, appInsightsResourceId, 'requests/duration')
+  markdownPart({ x: 6, y: 6, colSpan: 6, rowSpan: 1 }, 'Alert threshold: more than 10 exceptions in 15 minutes (`financeone-api-server-exceptions-high`)')
+  metricsChartPart({ x: 0, y: 7, colSpan: 6, rowSpan: 4 }, appInsightsResourceId, 'requests/failed')
+  metricsChartPart({ x: 6, y: 7, colSpan: 6, rowSpan: 4 }, appInsightsResourceId, 'exceptions/server')
+
+  markdownPart({ x: 0, y: 11, colSpan: 12, rowSpan: 1 }, '## AKS / Container Insights')
+  markdownPart({ x: 0, y: 12, colSpan: 6, rowSpan: 1 }, 'Alert threshold: average above 85% for 15 minutes (`financeone-aks-node-cpu-high`)')
+  markdownPart({ x: 6, y: 12, colSpan: 6, rowSpan: 1 }, 'Alert threshold: average above 85% for 15 minutes (`financeone-aks-node-memory-high`)')
+  metricsChartPart({ x: 0, y: 13, colSpan: 6, rowSpan: 4 }, aksResourceId, 'node_cpu_usage_percentage')
+  metricsChartPart({ x: 6, y: 13, colSpan: 6, rowSpan: 4 }, aksResourceId, 'node_memory_working_set_percentage')
+
+  markdownPart({ x: 0, y: 17, colSpan: 12, rowSpan: 1 }, '## MySQL')
+  metricsChartPart({ x: 0, y: 18, colSpan: 6, rowSpan: 4 }, mysqlResourceId, 'cpu_percent')
+  metricsChartPart({ x: 6, y: 18, colSpan: 6, rowSpan: 4 }, mysqlResourceId, 'active_connections')
+  markdownPart({ x: 0, y: 22, colSpan: 6, rowSpan: 1 }, 'Alert threshold: average above 85% for 15 minutes (`financeone-mysql-storage-high`)')
+  metricsChartPart({ x: 0, y: 23, colSpan: 6, rowSpan: 4 }, mysqlResourceId, 'storage_percent')
+  metricsChartPart({ x: 6, y: 23, colSpan: 6, rowSpan: 4 }, mysqlResourceId, 'io_consumption_percent')
+]
+
 resource dashboard 'Microsoft.Portal/dashboards@2015-08-01-preview' = {
   name: 'financeone-dashboard'
   location: location
@@ -76,34 +100,17 @@ resource dashboard 'Microsoft.Portal/dashboards@2015-08-01-preview' = {
     'hidden-title': 'FinanceOne Overview'
   }
   properties: {
-    lenses: [
-      {
+    // Microsoft.Portal/dashboards is the classic pre-Bicep dashboard format: both `lenses` and a
+    // lens's `parts` are JSON objects keyed by stringified index ("0", "1", ...), not arrays, even
+    // though Bicep's own type for them looks array-shaped. An array literal here passes `bicep
+    // build` (just a BCP036 warning) but fails ARM preflight validation at apply time, so `parts`
+    // is built as an object via toObject rather than written as a `parts: [...]` literal.
+    lenses: {
+      '0': {
         order: 0
-        parts: [
-          markdownPart({ x: 0, y: 0, colSpan: 12, rowSpan: 1 }, '# FinanceOne Overview\nAPI health, AKS node pressure, and MySQL pressure — the same signals monitor-alerts.bicep pages on.')
-
-          markdownPart({ x: 0, y: 1, colSpan: 12, rowSpan: 1 }, '## API / Application Insights')
-          metricsChartPart({ x: 0, y: 2, colSpan: 6, rowSpan: 4 }, appInsightsResourceId, 'requests/count')
-          metricsChartPart({ x: 6, y: 2, colSpan: 6, rowSpan: 4 }, appInsightsResourceId, 'requests/duration')
-          markdownPart({ x: 6, y: 6, colSpan: 6, rowSpan: 1 }, 'Alert threshold: more than 10 exceptions in 15 minutes (`financeone-api-server-exceptions-high`)')
-          metricsChartPart({ x: 0, y: 7, colSpan: 6, rowSpan: 4 }, appInsightsResourceId, 'requests/failed')
-          metricsChartPart({ x: 6, y: 7, colSpan: 6, rowSpan: 4 }, appInsightsResourceId, 'exceptions/server')
-
-          markdownPart({ x: 0, y: 11, colSpan: 12, rowSpan: 1 }, '## AKS / Container Insights')
-          markdownPart({ x: 0, y: 12, colSpan: 6, rowSpan: 1 }, 'Alert threshold: average above 85% for 15 minutes (`financeone-aks-node-cpu-high`)')
-          markdownPart({ x: 6, y: 12, colSpan: 6, rowSpan: 1 }, 'Alert threshold: average above 85% for 15 minutes (`financeone-aks-node-memory-high`)')
-          metricsChartPart({ x: 0, y: 13, colSpan: 6, rowSpan: 4 }, aksResourceId, 'node_cpu_usage_percentage')
-          metricsChartPart({ x: 6, y: 13, colSpan: 6, rowSpan: 4 }, aksResourceId, 'node_memory_working_set_percentage')
-
-          markdownPart({ x: 0, y: 17, colSpan: 12, rowSpan: 1 }, '## MySQL')
-          metricsChartPart({ x: 0, y: 18, colSpan: 6, rowSpan: 4 }, mysqlResourceId, 'cpu_percent')
-          metricsChartPart({ x: 6, y: 18, colSpan: 6, rowSpan: 4 }, mysqlResourceId, 'active_connections')
-          markdownPart({ x: 0, y: 22, colSpan: 6, rowSpan: 1 }, 'Alert threshold: average above 85% for 15 minutes (`financeone-mysql-storage-high`)')
-          metricsChartPart({ x: 0, y: 23, colSpan: 6, rowSpan: 4 }, mysqlResourceId, 'storage_percent')
-          metricsChartPart({ x: 6, y: 23, colSpan: 6, rowSpan: 4 }, mysqlResourceId, 'io_consumption_percent')
-        ]
+        parts: toObject(range(0, length(parts)), i => string(i), i => parts[i])
       }
-    ]
+    }
     metadata: {
       model: {
         timeRange: {
