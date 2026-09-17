@@ -2,11 +2,16 @@ name: Infrastructure
 
 # Mirrors build-and-test.yaml's role for application code: the single definition of "what would
 # this infra change actually do". `what-if` previews every PR touching infra/** so a bad template
-# edit is visible before merge, and is also available on demand via workflow_dispatch.
+# edit is visible before merge, and is also available on demand via workflow_dispatch. A second
+# what-if, run in Complete mode, previews the opposite question — what exists in the resource group
+# that Bicep no longer knows about — without changing how anything actually gets deployed (see the
+# "Detect resources not defined in Bicep" step below).
 #
 # The actual apply lives in build-and-deploy.yaml as the infra-deploy job (still gated behind the
 # infra-production GitHub Environment), not here — that lets it sit ahead of the AKS deploy jobs in
 # the same run, so app code that depends on new infra never rolls out before that infra is applied.
+# That apply stays on the default Incremental mode: it only ever creates/updates what's in
+# main.bicep and never deletes a resource just because the resource is missing from the template.
 #
 #   what-if  (every PR touching infra/**, and workflow_dispatch)
 on:
@@ -60,17 +65,68 @@ jobs:
             echo 'WHATIF_EOF'
           } >> "$GITHUB_OUTPUT"
 
+      # `what-if` never applies anything, in any mode — passing --mode Complete only changes what
+      # it *reports*. Under Incremental (the mode the "Run what-if" step above uses, and the mode
+      # `infra-deploy` actually applies), a resource that exists in the resource group but isn't in
+      # main.bicep is simply ignored. Under Complete, the same resource shows up as a "Delete"
+      # change, which is what lets us detect it here without changing how the real deploy behaves.
+      - name: Detect resources not defined in Bicep (Complete-mode preview)
+        id: drift
+        run: |
+          az deployment group what-if \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file infra/main.bicep \
+            --parameters infra/main.parameters.json \
+            --mode Complete \
+            --no-pretty-print \
+            -o json > complete-what-if.json \
+            || echo '{}' > complete-what-if.json
+
+          # Microsoft.Authorization/roleAssignments is deliberately kept out of main.bicep (see
+          # infra/role-assignments.bicep and the Infrastructure section of CLAUDE.md) — it always
+          # shows up as "extra" here and isn't drift, so it's excluded from the report.
+          orphans=$(jq -r '
+            (.changes // .properties.changes // [])
+            | map(select(.changeType == "Delete"))
+            | map(select((.resourceId // "") | test("Microsoft.Authorization/roleAssignments"; "i") | not))
+            | .[].resourceId
+          ' complete-what-if.json)
+
+          {
+            echo 'orphans<<ORPHANS_EOF'
+            echo "$orphans"
+            echo 'ORPHANS_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+          if [ -n "$orphans" ]; then
+            {
+              echo "### ⚠️ Resources not defined in Bicep"
+              echo '```'
+              echo "$orphans"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Post what-if result to PR
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
           WHATIF_RESULT: ${{ steps.whatif.outputs.result }}
+          ORPHANS: ${{ steps.drift.outputs.orphans }}
         run: |
           {
             echo "### Infra what-if"
             echo '```'
             echo "$WHATIF_RESULT"
             echo '```'
+            if [ -n "$ORPHANS" ]; then
+              echo
+              echo "### ⚠️ Resources not defined in \`infra/main.bicep\`"
+              echo "These exist in \`rg-financeone-msu\` but aren't declared in Bicep. Incremental mode (what \`infra-deploy\` actually runs) leaves them alone, so nothing is deleted automatically — remove them by hand if they're no longer needed, or add them to \`main.bicep\` if they should be managed."
+              echo '```'
+              echo "$ORPHANS"
+              echo '```'
+            fi
           } > whatif-comment.md
           gh pr comment "${{ github.event.pull_request.number }}" \
             --body-file whatif-comment.md \

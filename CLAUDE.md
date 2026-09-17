@@ -97,6 +97,17 @@ sequenced ahead of the AKS deploy jobs in the same run. It's still gated behind 
 the workflow itself is unattended. `financeone-uami` holds `Contributor` on `rg-financeone-msu` for
 this — enough for every resource type in `main.bicep`.
 
+`infra-deploy` never passes `--mode`, so it deploys **Incremental** (the CLI default): it only
+creates/updates what's declared in `main.bicep` and leaves everything else in the resource group
+alone, even a resource that used to be in Bicep and got deleted from the template. `infra.yaml`
+runs a second, Complete-mode `what-if` to surface that gap — Complete mode only changes what
+`what-if` *reports* (`what-if` never applies anything, in either mode), so a resource that's in the
+resource group but not in `main.bicep` shows up as a "Delete" change in that preview and gets called
+out in the PR comment, without `infra-deploy` itself ever actually deleting anything.
+`Microsoft.Authorization/roleAssignments` is excluded from that report, since
+`infra/role-assignments.bicep` is deliberately kept out of `main.bicep` (see below) and would
+otherwise show up as permanent false-positive drift.
+
 `infra/role-assignments.bicep` is a second, separate template holding every
 `Microsoft.Authorization/roleAssignments` this project needs (the grants financeone-uami and the AKS
 kubelet identity hold on ACR/AKS/Key Vault/Storage). It is deliberately **not** wired into
