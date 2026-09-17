@@ -214,6 +214,50 @@ public class ImportTransactionsHandlerTests
             Arg.Any<CancellationToken>());
     }
 
+    // A different real export of the same bank feature (English-locale) uses period-decimal
+    // amounts with Beløp ut already signed negative, rather than comma-decimal with an unsigned
+    // magnitude — e.g. "-568.65" instead of "568,65". Both must resolve to the same stored amount.
+    [Fact]
+    public async Task Imports_A_Debit_Row_Already_Signed_Negative_With_A_Decimal_Point()
+    {
+        var csv = BuildCsv("01.06.2026;REMA ILA;Varekjøp;;;-568.65;Bokført");
+
+        var response = await Handler.Handle(new ImportTransactionsCommand(csv, "june.csv", 100), CancellationToken.None);
+
+        Assert.True(response.IsSuccess);
+        Assert.Equal(1, response.Result!.ImportedCount);
+        Assert.Equal(0, response.Result.InvalidRowCount);
+        await _repository.Received(1).AddRange(
+            Arg.Is<List<Transaction>>(t => t.Count == 1 && t[0].Amount == -568.65m),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Imports_A_Credit_Row_With_A_Decimal_Point_And_No_Thousands_Separator()
+    {
+        var csv = BuildCsv("15.06.2026;Salary;Lønn;;5284.00;;Bokført");
+
+        var response = await Handler.Handle(new ImportTransactionsCommand(csv, "june.csv", 100), CancellationToken.None);
+
+        Assert.True(response.IsSuccess);
+        await _repository.Received(1).AddRange(
+            Arg.Is<List<Transaction>>(t => t.Count == 1 && t[0].Amount == 5_284.00m),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Imports_A_Whole_Number_Amount_With_No_Separator_At_All()
+    {
+        var csv = BuildCsv("01.06.2026;Kiosk;Varekjøp;;;545;Bokført");
+
+        var response = await Handler.Handle(new ImportTransactionsCommand(csv, "june.csv", 100), CancellationToken.None);
+
+        Assert.True(response.IsSuccess);
+        await _repository.Received(1).AddRange(
+            Arg.Is<List<Transaction>>(t => t.Count == 1 && t[0].Amount == -545.00m),
+            Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task Counts_A_Row_With_Both_Amount_Columns_Populated_As_Invalid()
     {
