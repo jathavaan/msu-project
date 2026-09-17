@@ -1,5 +1,11 @@
 import { apiSlice } from '../../app/apiSlice'
-import type { CreateSavingGoalRequest, SavingGoal, SavingGoalProjection, UpdateSavingGoalRequest } from './types'
+import type {
+  CreateSavingGoalRequest,
+  SavingGoal,
+  SavingGoalProjection,
+  SavingGoalsProjectionPoint,
+  UpdateSavingGoalRequest,
+} from './types'
 
 export const savingGoalsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
@@ -49,6 +55,12 @@ export const savingGoalsApi = apiSlice.injectEndpoints({
         { type: 'SavingGoal', id: 'LIST' },
       ],
     }),
+    getSavingGoalsProjection: builder.query<SavingGoalsProjectionPoint[], { years?: number }>({
+      query: ({ years } = {}) => ({ url: '/saving-goals/projection', params: years ? { years } : undefined }),
+      // Same reasoning as getSavingGoalProjection above: a monthly saving mutation only invalidates
+      // LIST, not a per-goal tag, and this chart sums every goal so LIST is the only tag that fits.
+      providesTags: [{ type: 'SavingGoal', id: 'LIST' }],
+    }),
   }),
 })
 
@@ -59,4 +71,5 @@ export const {
   useDeleteSavingGoalMutation,
   useGetSavingGoalProjectionQuery,
   useUploadSavingGoalImageMutation,
+  useGetSavingGoalsProjectionQuery,
 } = savingGoalsApi

@@ -46,3 +46,11 @@ export interface SavingGoalProjection {
   points: SavingGoalProjectionPoint[]
   reachDate: string | null
 }
+
+/** Mirrors Features/SavingGoals/GetSavingGoalsProjection/SavingGoalsProjectionPointVm.cs — the
+ * combined balance across every saving goal, for the "total projected savings" chart. */
+export interface SavingGoalsProjectionPoint {
+  month: number
+  date: string
+  totalBalance: number
+}
