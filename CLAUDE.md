@@ -54,18 +54,19 @@ missing, the usual cause is the test step dying before writing its file at all.
 shared gate, and both wait on `infra-deploy` before actually rolling out:
 
 ```
-changes ─┬────────────────────────────────────────────────────────────┐
-         │                                                            │
-         ├→ infra-deploy ─────────────────────────────────────────────┤
-         │                                                            │
-test ────┼→ build-and-push-server → deploy-server (needs infra-deploy)│  (migrations, then rollout)
-         └→ build-and-push-client → deploy-client (needs infra-deploy)│
+          ┌→ infra-deploy ───────────────────────────────────┐
+changes ──┤                                                  │
+          └→ test ─┬→ build-and-push-server → deploy-server ─┤
+                    └→ build-and-push-client → deploy-client ─┘
 ```
 
 `test` calls the same `build-and-test.yaml` the PR workflow does and has **no** path filter, so
 both the frontend and the backend suites must pass before *either* chain pushes an image — a
-client-only change still has to keep the backend green. `changes` (path filters) decides which
-chains run at all; a `workflow_dispatch` run forces all three.
+client-only change still has to keep the backend green. It `needs: changes` purely so the run
+graph reads detect-then-act; `changes`'s outputs don't gate whether `test` runs, only what runs
+after it — `infra-deploy`, `build-and-push-server`, and `build-and-push-client` are the jobs
+actually skipped per-service when their path filter doesn't match. A `workflow_dispatch` run
+forces all three of those regardless of what changed.
 
 `infra-deploy` runs the real Bicep apply (see Infrastructure below) ahead of the AKS deploy jobs, so
 app code that depends on new infra never rolls out before that infra exists. `deploy-server` and
