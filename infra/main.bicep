@@ -148,6 +148,16 @@ module monitorAlerts 'modules/monitor-alerts.bicep' = {
   }
 }
 
+module dashboard 'modules/dashboard.bicep' = {
+  name: 'dashboard'
+  params: {
+    location: location
+    appInsightsResourceId: appInsights.outputs.id
+    aksResourceId: aks.outputs.id
+    mysqlResourceId: mysql.outputs.id
+  }
+}
+
 output acrLoginServer string = acr.outputs.loginServer
 output aksName string = aks.outputs.name
 output keyVaultUri string = keyVault.outputs.vaultUri
@@ -156,3 +166,4 @@ output functionAppName string = functions.outputs.name
 output acsName string = communication.outputs.acsName
 @description('Connection string of the workspace-based Application Insights resource — needed to populate the ApplicationInsights--ConnectionString Key Vault secret and the APPINSIGHTS_CONNECTION_STRING GitHub secret (see issue #50).')
 output appInsightsConnectionString string = appInsights.outputs.connectionString
+output dashboardName string = dashboard.outputs.name
