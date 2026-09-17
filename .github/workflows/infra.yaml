@@ -13,9 +13,26 @@ name: Infrastructure
 # That apply stays on the default Incremental mode: it only ever creates/updates what's in
 # main.bicep and never deletes a resource just because the resource is missing from the template.
 #
-#   what-if  (every PR touching infra/**, and workflow_dispatch)
+# Deleting that drift for real is a separate, opt-in path: the prune-drift job below, triggered only
+# by workflow_dispatch with action: prune-drift, never by a PR or a merge to main. See that job for
+# why it's gated the way it is.
+#
+#   what-if      (every PR touching infra/**, and workflow_dispatch with action: preview)
+#   prune-drift  (workflow_dispatch with action: prune-drift, only)
 on:
   workflow_dispatch:
+    inputs:
+      action:
+        description: "preview: read-only what-if (default). prune-drift: actually deletes resources missing from Bicep."
+        type: choice
+        options:
+          - preview
+          - prune-drift
+        default: preview
+      confirm:
+        description: "Only read for prune-drift: type the resource group name (rg-financeone-msu) exactly to proceed."
+        required: false
+        default: ""
   pull_request:
     branches: [ "main" ]
     paths: [ "infra/**" ]
@@ -31,6 +48,7 @@ jobs:
   what-if:
     name: Preview (what-if)
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.action == 'preview'
     # A job-level `permissions:` block replaces the workflow-level one for that job rather than
     # adding to it, so id-token: write has to be repeated here too — omitting it is exactly what
     # broke azure/login the first time (it needs id-token: write to fetch the OIDC token at all).
@@ -131,3 +149,51 @@ jobs:
           gh pr comment "${{ github.event.pull_request.number }}" \
             --body-file whatif-comment.md \
             --edit-last --create-if-none
+
+  # Fails fast on a mistaken or default-inputs trigger, before it ever reaches the infra-production
+  # approval gate below — an approver shouldn't have to spend a review click on a typo'd input.
+  validate-prune-request:
+    name: Validate prune-drift request
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'prune-drift'
+    steps:
+      - name: Require typed confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "${{ env.RESOURCE_GROUP }}" ]; then
+            echo "::error::Refusing to prune — the 'confirm' input must exactly match the resource group name (${{ env.RESOURCE_GROUP }}), and it was '${{ github.event.inputs.confirm }}'. Re-run workflow_dispatch with action: prune-drift and confirm: ${{ env.RESOURCE_GROUP }}."
+            exit 1
+          fi
+
+  # The one place in this repo that actually deletes Azure resources. Complete mode deletes any
+  # resource in the resource group that main.bicep doesn't declare — check the what-if job's
+  # "Resources not defined in Bicep" report BEFORE running this. The infra-production approval gate
+  # below fires before any step in this job runs, so the approver has no live diff to review at
+  # approval time; they have to have already checked the preview. Per Azure's deployment-mode
+  # semantics, Complete mode only deletes standard resource-group-level resources — it does not
+  # touch extension resources such as role assignments, locks, or policy assignments, so
+  # infra/role-assignments.bicep is unaffected without any extra filtering.
+  prune-drift:
+    name: Prune drift (delete resources missing from Bicep)
+    runs-on: ubuntu-latest
+    needs: validate-prune-request
+    environment: infra-production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Delete resources not defined in Bicep
+        run: |
+          az deployment group create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file infra/main.bicep \
+            --parameters infra/main.parameters.json \
+            --mode Complete
