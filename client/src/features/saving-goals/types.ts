@@ -11,8 +11,6 @@ export interface SavingGoal {
   monthlyContribution: number
   /** Annual percentage, e.g. 4.5 for 4.5%. Null when the goal has no rate set. */
   interestRate: number | null
-  /** Relative path to the uploaded image (see UploadSavingGoalImage), e.g. `/api/saving-goals/{id}/image`. Null until one is uploaded. */
-  imageUrl: string | null
 }
 
 /** Mirrors Features/SavingGoals/CreateSavingGoal/CreateSavingGoalCommand.cs */

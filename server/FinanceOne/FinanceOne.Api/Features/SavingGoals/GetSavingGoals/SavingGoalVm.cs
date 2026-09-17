@@ -9,5 +9,4 @@ public sealed record SavingGoalVm(
     decimal AmountRemaining,
     int DaysRemaining,
     decimal MonthlyContribution,
-    decimal? InterestRate,
-    string? ImageUrl);
+    decimal? InterestRate);

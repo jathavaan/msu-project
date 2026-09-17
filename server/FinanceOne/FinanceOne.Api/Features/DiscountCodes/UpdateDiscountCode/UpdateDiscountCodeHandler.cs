@@ -13,7 +13,6 @@ public sealed class UpdateDiscountCodeHandler(IUpdateDiscountCodeRepository repo
 
         discountCode.StoreName = request.StoreName;
         discountCode.CodeText = request.CodeText;
-        discountCode.CodeImageUrl = request.CodeImageUrl;
         discountCode.ExpiryDate = request.ExpiryDate;
         await repository.Update(cancellationToken);
         return Response<Unit>.Success(new Unit());

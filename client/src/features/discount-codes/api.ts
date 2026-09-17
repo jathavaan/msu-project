@@ -31,6 +31,17 @@ export const discountCodesApi = apiSlice.injectEndpoints({
         { type: 'DiscountCode', id: 'LIST' },
       ],
     }),
+    uploadDiscountCodeImage: builder.mutation<void, { id: string; file: File }>({
+      query: ({ id, file }) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        return { url: `/discount-codes/${id}/image`, method: 'PUT', body: formData }
+      },
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'DiscountCode', id },
+        { type: 'DiscountCode', id: 'LIST' },
+      ],
+    }),
   }),
 })
 
@@ -39,4 +50,5 @@ export const {
   useCreateDiscountCodeMutation,
   useUpdateDiscountCodeMutation,
   useDeleteDiscountCodeMutation,
+  useUploadDiscountCodeImageMutation,
 } = discountCodesApi

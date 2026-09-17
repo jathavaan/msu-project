@@ -11,7 +11,7 @@ public class CreateDiscountCodeValidatorTests
     private readonly CreateDiscountCodeValidator _validator =
         new(new FakeTimeProvider(new DateTimeOffset(2026, 6, 15, 10, 0, 0, TimeSpan.Zero)));
 
-    private static CreateDiscountCodeCommand Valid() => new("Rema 1000", "SAVE20", null, Today.AddDays(30));
+    private static CreateDiscountCodeCommand Valid() => new("Rema 1000", "SAVE20", Today.AddDays(30));
 
     [Fact]
     public void StoreName_Is_Required()
@@ -39,11 +39,12 @@ public class CreateDiscountCodeValidatorTests
         result.ShouldNotHaveValidationErrorFor(c => c.ExpiryDate);
     }
 
-    // A code can be a scannable image instead of text, so neither field is individually required.
+    // A code can be a scannable image (added later via Upload Discount Code Image) instead of
+    // text, so CodeText is not required on its own.
     [Fact]
-    public void CodeText_And_CodeImageUrl_Are_Both_Optional()
+    public void CodeText_Is_Optional()
     {
-        var result = _validator.TestValidate(Valid() with { CodeText = null, CodeImageUrl = null });
+        var result = _validator.TestValidate(Valid() with { CodeText = null });
 
         result.ShouldNotHaveAnyValidationErrors();
     }

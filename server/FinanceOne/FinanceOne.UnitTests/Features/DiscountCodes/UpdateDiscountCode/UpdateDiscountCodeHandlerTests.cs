@@ -23,7 +23,7 @@ public class UpdateDiscountCodeHandlerTests
         _repository.GetById(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((DiscountCode?)null);
 
         var response = await Handler.Handle(
-            new UpdateDiscountCodeCommand(Guid.NewGuid(), "Rema 1000", null, null, new DateOnly(2026, 12, 31)),
+            new UpdateDiscountCodeCommand(Guid.NewGuid(), "Rema 1000", null, new DateOnly(2026, 12, 31)),
             CancellationToken.None);
 
         Assert.Equal(StatusCodes.Status404NotFound, response.ErrorCode);
@@ -39,31 +39,44 @@ public class UpdateDiscountCodeHandlerTests
         _repository.GetById(id, Arg.Any<CancellationToken>()).Returns(discountCode);
 
         var response = await Handler.Handle(
-            new UpdateDiscountCodeCommand(id, "Kiwi", "KIWI10", "https://example.test/kiwi.png", newExpiry),
+            new UpdateDiscountCodeCommand(id, "Kiwi", "KIWI10", newExpiry),
             CancellationToken.None);
 
         Assert.True(response.IsSuccess);
         Assert.Equal("Kiwi", discountCode.StoreName);
         Assert.Equal("KIWI10", discountCode.CodeText);
-        Assert.Equal("https://example.test/kiwi.png", discountCode.CodeImageUrl);
         Assert.Equal(newExpiry, discountCode.ExpiryDate);
         await _repository.Received(1).Update(Arg.Any<CancellationToken>());
     }
 
-    // The optional fields are assigned unconditionally, so sending null genuinely clears a code
-    // rather than leaving the previous value in place.
+    // CodeImageUrl is untouched by this handler — only Upload Discount Code Image sets it.
     [Fact]
-    public async Task Clears_The_Optional_Fields_When_Sent_As_Null()
+    public async Task Leaves_The_Image_Url_Unchanged()
     {
         var id = Guid.NewGuid();
         var discountCode = ACode(id);
         _repository.GetById(id, Arg.Any<CancellationToken>()).Returns(discountCode);
 
         await Handler.Handle(
-            new UpdateDiscountCodeCommand(id, "Rema 1000", null, null, new DateOnly(2026, 12, 31)),
+            new UpdateDiscountCodeCommand(id, "Kiwi", "KIWI10", new DateOnly(2027, 3, 1)),
+            CancellationToken.None);
+
+        Assert.Equal("https://example.test/code.png", discountCode.CodeImageUrl);
+    }
+
+    // CodeText is assigned unconditionally, so sending null genuinely clears it rather than
+    // leaving the previous value in place.
+    [Fact]
+    public async Task Clears_CodeText_When_Sent_As_Null()
+    {
+        var id = Guid.NewGuid();
+        var discountCode = ACode(id);
+        _repository.GetById(id, Arg.Any<CancellationToken>()).Returns(discountCode);
+
+        await Handler.Handle(
+            new UpdateDiscountCodeCommand(id, "Rema 1000", null, new DateOnly(2026, 12, 31)),
             CancellationToken.None);
 
         Assert.Null(discountCode.CodeText);
-        Assert.Null(discountCode.CodeImageUrl);
     }
 }

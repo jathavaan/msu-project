@@ -96,24 +96,4 @@ public class GetSavingGoalsTests(MySqlFixture fixture) : IntegrationTest(fixture
 
         Assert.Null(Assert.Single(response.Result!).InterestRate);
     }
-
-    [Fact]
-    public async Task Includes_The_Image_Url_When_Set()
-    {
-        await GivenSavingGoal("New Car", 250_000m, Today.AddDays(90), imageUrl: "/api/saving-goals/g1/image");
-
-        var response = await Handler.Handle(new GetSavingGoalsQuery(), CancellationToken.None);
-
-        Assert.Equal("/api/saving-goals/g1/image", Assert.Single(response.Result!).ImageUrl);
-    }
-
-    [Fact]
-    public async Task Reports_Null_Image_Url_When_Not_Set()
-    {
-        await GivenSavingGoal("New Car", 250_000m, Today.AddDays(90));
-
-        var response = await Handler.Handle(new GetSavingGoalsQuery(), CancellationToken.None);
-
-        Assert.Null(Assert.Single(response.Result!).ImageUrl);
-    }
 }

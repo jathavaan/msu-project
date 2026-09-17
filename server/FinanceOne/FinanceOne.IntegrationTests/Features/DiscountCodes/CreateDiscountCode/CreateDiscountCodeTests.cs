@@ -14,7 +14,7 @@ public class CreateDiscountCodeTests(MySqlFixture fixture) : IntegrationTest(fix
         var expiry = new DateOnly(2026, 12, 31);
 
         var response = await Handler.Handle(
-            new CreateDiscountCodeCommand("Rema 1000", "SAVE20", "https://example.test/code.png", expiry),
+            new CreateDiscountCodeCommand("Rema 1000", "SAVE20", expiry),
             CancellationToken.None);
 
         Assert.True(response.IsSuccess);
@@ -23,7 +23,7 @@ public class CreateDiscountCodeTests(MySqlFixture fixture) : IntegrationTest(fix
         var saved = await context.DiscountCodes.SingleAsync(d => d.Id == response.Result);
         Assert.Equal("Rema 1000", saved.StoreName);
         Assert.Equal("SAVE20", saved.CodeText);
-        Assert.Equal("https://example.test/code.png", saved.CodeImageUrl);
+        Assert.Null(saved.CodeImageUrl);
     }
 
     // ExpiryDate is a DateOnly on a MySQL `date` column via an explicit DateTime conversion,
@@ -35,18 +35,19 @@ public class CreateDiscountCodeTests(MySqlFixture fixture) : IntegrationTest(fix
         var expiry = new DateOnly(2026, 12, 31);
 
         var response = await Handler.Handle(
-            new CreateDiscountCodeCommand("Rema 1000", "SAVE20", null, expiry), CancellationToken.None);
+            new CreateDiscountCodeCommand("Rema 1000", "SAVE20", expiry), CancellationToken.None);
 
         await using var context = NewContext();
         Assert.Equal(expiry, (await context.DiscountCodes.SingleAsync(d => d.Id == response.Result)).ExpiryDate);
     }
 
-    // A code can be a scannable image rather than text, so both optional columns must accept null.
+    // A code can be a scannable image (added later via Upload Discount Code Image) rather than
+    // text, so CodeText must accept null.
     [Fact]
-    public async Task Stores_A_Code_With_Neither_Text_Nor_Image()
+    public async Task Stores_A_Code_With_No_Text()
     {
         var response = await Handler.Handle(
-            new CreateDiscountCodeCommand("Kiwi", null, null, new DateOnly(2026, 12, 31)), CancellationToken.None);
+            new CreateDiscountCodeCommand("Kiwi", null, new DateOnly(2026, 12, 31)), CancellationToken.None);
 
         Assert.True(response.IsSuccess);
 
