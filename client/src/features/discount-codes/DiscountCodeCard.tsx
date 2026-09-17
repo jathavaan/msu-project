@@ -19,9 +19,7 @@ export function DiscountCodeCard({ discountCode, onEdit, onDelete }: DiscountCod
     <div className="rounded-xl border border-border p-4">
       <div className="mb-3 flex items-start justify-between">
         <div className="flex items-center gap-2">
-          {discountCode.codeImageUrl ? (
-            <img src={resolveApiUrl(discountCode.codeImageUrl)} alt="" className="h-9 w-9 rounded-lg object-cover" />
-          ) : (
+          {!discountCode.codeImageUrl && (
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-page text-ink-faint">
               <Ticket size={16} />
             </div>
@@ -51,6 +49,13 @@ export function DiscountCodeCard({ discountCode, onEdit, onDelete }: DiscountCod
       >
         {isExpired ? 'Expired' : `Expires ${formatDate(discountCode.expiryDate)}`}
       </span>
+      {discountCode.codeImageUrl && (
+        <img
+          src={resolveApiUrl(discountCode.codeImageUrl)}
+          alt={`${discountCode.storeName} coupon`}
+          className="mt-3 max-h-48 w-full rounded-lg border border-border object-contain"
+        />
+      )}
     </div>
   )
 }

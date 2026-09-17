@@ -28,16 +28,28 @@ describe('DiscountCodeCard', () => {
     expect(screen.getByText('Digg25')).toBeInTheDocument()
   })
 
-  it('shows a placeholder icon when no image has been uploaded', () => {
+  it('shows a placeholder icon and no image when none has been uploaded', () => {
     renderCard()
 
-    expect(screen.queryByAltText('')).not.toBeInTheDocument()
+    expect(screen.queryByAltText('Digg Pizza coupon')).not.toBeInTheDocument()
   })
 
-  it('shows the uploaded image, resolved against the API base URL, when one is set', () => {
+  it('shows the uploaded image full-width, resolved against the API base URL, when one is set', () => {
     renderCard({ codeImageUrl: '/api/discount-codes/d1/image' })
 
-    expect(screen.getByAltText('')).toHaveAttribute('src', `${API_URL}/discount-codes/d1/image`)
+    expect(screen.getByAltText('Digg Pizza coupon')).toHaveAttribute('src', `${API_URL}/discount-codes/d1/image`)
+  })
+
+  it('drops the header placeholder icon once an image is uploaded', () => {
+    const { container } = renderWithStore(
+      <DiscountCodeCard
+        discountCode={{ ...discountCode, codeImageUrl: '/api/discount-codes/d1/image' }}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+
+    expect(container.querySelectorAll('svg').length).toBe(2) // pencil + trash only, no ticket icon
   })
 
   it('hands the code back to its edit and delete callbacks', async () => {
