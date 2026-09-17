@@ -20,18 +20,24 @@ public sealed class AzuriteFixture : IAsyncLifetime
 
     public IBlobStorageService BlobStorageService { get; private set; } = null!;
 
+    // Exposed alongside BlobStorageService (rather than only through it) for tests that need to
+    // enumerate a container's blobs — e.g. finding a generated-name blob a slice just staged.
+    // IBlobStorageService deliberately has no listing operation (nothing outside the API is ever
+    // handed a SAS token or the container's contents), so tests reach for the raw client instead.
+    public BlobServiceClient BlobServiceClient { get; private set; } = null!;
+
     public async Task InitializeAsync()
     {
         await _container.StartAsync();
 
-        var blobServiceClient = new BlobServiceClient(_container.GetConnectionString());
+        BlobServiceClient = new BlobServiceClient(_container.GetConnectionString());
         foreach (var container in new[]
                  { BlobContainers.Coupons, BlobContainers.Exports, BlobContainers.StagedCsv })
         {
-            await blobServiceClient.GetBlobContainerClient(container).CreateIfNotExistsAsync();
+            await BlobServiceClient.GetBlobContainerClient(container).CreateIfNotExistsAsync();
         }
 
-        BlobStorageService = new BlobStorageService(blobServiceClient);
+        BlobStorageService = new BlobStorageService(BlobServiceClient);
     }
 
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();
