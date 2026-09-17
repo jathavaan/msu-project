@@ -1,16 +1,16 @@
-namespace FinanceOne.Api.Features.DiscountCodes.UploadDiscountCodeImage;
+namespace FinanceOne.Api.Features.Transactions.ImportTransactions;
 
-public static class UploadDiscountCodeImageEndpoint
+public static class ImportTransactionsEndpoint
 {
-    public static RouteGroupBuilder MapUploadDiscountCodeImage(this RouteGroupBuilder group)
+    public static RouteGroupBuilder MapImportTransactions(this RouteGroupBuilder group)
     {
-        group.MapPut("/{id:guid}/image", async (Guid id, IFormFile file, UploadDiscountCodeImageHandler handler, CancellationToken ct) =>
+        group.MapPost("/import", async (IFormFile file, ImportTransactionsHandler handler, CancellationToken ct) =>
             {
                 await using var stream = file.OpenReadStream();
                 var response = await handler.Handle(
-                    new UploadDiscountCodeImageCommand(id, stream, file.ContentType, file.Length), ct);
+                    new ImportTransactionsCommand(stream, file.FileName, file.Length), ct);
                 return response.IsSuccess
-                    ? Results.NoContent()
+                    ? Results.Ok(response.Result)
                     : Results.Problem(statusCode: response.ErrorCode, detail: response.ErrorMessage);
             })
             // Binding IFormFile makes ASP.NET Core mark this endpoint as requiring antiforgery

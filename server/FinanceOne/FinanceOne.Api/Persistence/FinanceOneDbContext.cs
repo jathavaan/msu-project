@@ -9,12 +9,14 @@ public sealed class FinanceOneDbContext(DbContextOptions<FinanceOneDbContext> op
     : DbContext(options)
 {
     public DbSet<Budget> Budgets => Set<Budget>();
+    public DbSet<CategorizationRule> CategorizationRules => Set<CategorizationRule>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<DiscountCode> DiscountCodes => Set<DiscountCode>();
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<Income> Incomes => Set<Income>();
     public DbSet<MonthlySaving> MonthlySavings => Set<MonthlySaving>();
     public DbSet<SavingGoal> SavingGoals => Set<SavingGoal>();
+    public DbSet<Transaction> Transactions => Set<Transaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
