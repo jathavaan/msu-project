@@ -4,6 +4,7 @@ import {
   daysUntil,
   formatCurrency,
   formatDate,
+  formatMonthLabel,
   formatRecurrenceDay,
 } from './formatters'
 import { CategoryType } from './types'
@@ -58,6 +59,19 @@ describe('formatRecurrenceDay', () => {
     [13, '13th of the month'],
   ])('renders the teens %i with "th"', (day, expected) => {
     expect(formatRecurrenceDay(day)).toBe(expected)
+  })
+})
+
+describe('formatMonthLabel', () => {
+  it('formats a 1-indexed month with its year', () => {
+    expect(formatMonthLabel(2026, 6)).toBe('Jun 2026')
+  })
+
+  // month is 1-12 from the API, not JS Date's 0-11 — this pins the off-by-one conversion down at
+  // both ends of the range.
+  it('handles January and December without rolling into an adjacent year', () => {
+    expect(formatMonthLabel(2026, 1)).toBe('Jan 2026')
+    expect(formatMonthLabel(2026, 12)).toBe('Dec 2026')
   })
 })
 
