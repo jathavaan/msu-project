@@ -17,6 +17,7 @@ jobs:
     outputs:
       server: ${{ steps.filter.outputs.server }}
       client: ${{ steps.filter.outputs.client }}
+      infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,6 +32,8 @@ jobs:
             client:
               - 'client/**'
               - 'k8s/client-*.yaml'
+            infra:
+              - 'infra/**'
 
   # The exact same build + parallel test fan-out the PR workflow runs, so a direct push to main or a
   # semantic merge conflict can't reach ACR untested. Runs alongside `changes`, and gates everything
@@ -45,6 +48,35 @@ jobs:
       contents: read
       checks: write
 
+  # Applies Azure infra ahead of the AKS deploy jobs below, so app code that depends on new infra
+  # (e.g. a new Storage account) never goes live before that infra exists. Independent of `test` —
+  # infra correctness is validated by `what-if` on the PR (see infra.yaml), not by the app test
+  # suite. Still gated by the infra-production GitHub Environment, so it pauses here for the same
+  # manual approval click it always has.
+  infra-deploy:
+    runs-on: ubuntu-latest
+    name: Deploy infra
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.infra == 'true'
+    environment: infra-production
+    env:
+      RESOURCE_GROUP: rg-financeone-msu
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy infra
+        run: |
+          az deployment group create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file infra/main.bicep \
+            --parameters infra/main.parameters.json
 
   # Server and client are independent from here down: each builds, pushes and deploys in its own
   # chain, so a server rollout no longer waits on a client image build (or vice versa). Both chains
@@ -111,7 +143,13 @@ jobs:
   deploy-server:
     runs-on: ubuntu-latest
     name: Deploy server to AKS
-    needs: build-and-push-server
+    needs: [ build-and-push-server, infra-deploy ]
+    # Waits for infra-deploy only when it actually ran (infra changed); a skip counts as clear to
+    # proceed so a push that doesn't touch infra/** deploys exactly as fast as it does today.
+    if: |
+      !cancelled() &&
+      needs.build-and-push-server.result == 'success' &&
+      (needs.infra-deploy.result == 'success' || needs.infra-deploy.result == 'skipped')
     steps:
       - uses: actions/checkout@v4
 
@@ -173,7 +211,11 @@ jobs:
   deploy-client:
     runs-on: ubuntu-latest
     name: Deploy client to AKS
-    needs: build-and-push-client
+    needs: [ build-and-push-client, infra-deploy ]
+    if: |
+      !cancelled() &&
+      needs.build-and-push-client.result == 'success' &&
+      (needs.infra-deploy.result == 'success' || needs.infra-deploy.result == 'skipped')
     steps:
       - uses: actions/checkout@v4
 

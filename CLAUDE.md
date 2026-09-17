@@ -51,19 +51,27 @@ missing, the usual cause is the test step dying before writing its file at all.
 ## CD
 
 `build-and-deploy.yaml` runs on push to `main`. Server and client are independent chains below the
-shared gate:
+shared gate, and both wait on `infra-deploy` before actually rolling out:
 
 ```
-changes ─┬─────────────────────────────────────────────┐
-         │                                             │
-test ────┼→ build-and-push-server → deploy-server      │  (migrations, then rollout)
-         └→ build-and-push-client → deploy-client      │
+changes ─┬────────────────────────────────────────────────────────────┐
+         │                                                            │
+         ├→ infra-deploy ─────────────────────────────────────────────┤
+         │                                                            │
+test ────┼→ build-and-push-server → deploy-server (needs infra-deploy)│  (migrations, then rollout)
+         └→ build-and-push-client → deploy-client (needs infra-deploy)│
 ```
 
 `test` calls the same `build-and-test.yaml` the PR workflow does and has **no** path filter, so
 both the frontend and the backend suites must pass before *either* chain pushes an image — a
-client-only change still has to keep the backend green. `changes` (path filters) only decides
-which chain runs at all; a `workflow_dispatch` run forces both.
+client-only change still has to keep the backend green. `changes` (path filters) decides which
+chains run at all; a `workflow_dispatch` run forces all three.
+
+`infra-deploy` runs the real Bicep apply (see Infrastructure below) ahead of the AKS deploy jobs, so
+app code that depends on new infra never rolls out before that infra exists. `deploy-server` and
+`deploy-client` only require `infra-deploy` to be `success` **or** `skipped` — a push that doesn't
+touch `infra/**` deploys exactly as fast as it did before this job existed; one that does waits for
+the `infra-production` approval and apply to finish first.
 
 Each `deploy-*` job ends with `kubectl rollout status --timeout=300s`. That is a real gate now that
 both deployments have readiness probes: a pod that never becomes Ready fails the job, and because
@@ -82,15 +90,17 @@ Storage accounts, the Function App, Communication Services) provision resources 
 before this template.
 
 `.github/workflows/infra.yaml` runs `az deployment group what-if` on every PR touching `infra/**`
-(result posted as a PR comment) and `az deployment group create` on push to `main`, gated behind the
-`infra-production` GitHub Environment so an apply always needs a manual approval click even though
+and posts the result as a PR comment. The real `az deployment group create` runs as the
+`infra-deploy` job in `build-and-deploy.yaml` instead (see CD above) — that's what lets it be
+sequenced ahead of the AKS deploy jobs in the same run. It's still gated behind the
+`infra-production` GitHub Environment, so an apply always needs a manual approval click even though
 the workflow itself is unattended. `financeone-uami` holds `Contributor` on `rg-financeone-msu` for
 this — enough for every resource type in `main.bicep`.
 
 `infra/role-assignments.bicep` is a second, separate template holding every
 `Microsoft.Authorization/roleAssignments` this project needs (the grants financeone-uami and the AKS
 kubelet identity hold on ACR/AKS/Key Vault/Storage). It is deliberately **not** wired into
-`main.bicep` or `infra.yaml`: this subscription has an ABAC condition that allows delegating
+`main.bicep` or the `infra-deploy` job: this subscription has an ABAC condition that allows delegating
 `Contributor` but blocks delegating `User Access Administrator`, so financeone-uami can never itself
 hold `roleAssignments/write` and CI can never run it. Apply it by hand, with an account that has
 that write permission, whenever a role changes:
