@@ -32,7 +32,8 @@ public abstract class IntegrationTest : IAsyncLifetime
         // Ordered so that dependents go before the rows they reference — every FK onto Category and
         // SavingGoal is Restrict, so the reverse order would be rejected.
         foreach (var table in (string[])
-                 ["Budgets", "Expenses", "Incomes", "MonthlySavings", "SavingGoals", "DiscountCodes", "Categories"])
+                 ["Budgets", "Expenses", "Incomes", "MonthlySavings", "SavingGoals", "DiscountCodes",
+                     "Transactions", "CategorizationRules", "Categories"])
         {
             await Context.Database.ExecuteSqlRawAsync($"DELETE FROM `{table}`");
         }
@@ -145,5 +146,34 @@ public abstract class IntegrationTest : IAsyncLifetime
         Context.DiscountCodes.Add(discountCode);
         await Context.SaveChangesAsync();
         return discountCode;
+    }
+
+    protected async Task<Transaction> GivenTransaction(
+        DateOnly date,
+        string description,
+        decimal amount,
+        string hash,
+        Guid? categoryId = null)
+    {
+        var transaction = new Transaction
+        {
+            Id = Guid.NewGuid(),
+            Date = date,
+            Description = description,
+            Amount = amount,
+            CategoryId = categoryId,
+            Hash = hash,
+        };
+        Context.Transactions.Add(transaction);
+        await Context.SaveChangesAsync();
+        return transaction;
+    }
+
+    protected async Task<CategorizationRule> GivenCategorizationRule(string keyword, Guid categoryId)
+    {
+        var rule = new CategorizationRule { Id = Guid.NewGuid(), Keyword = keyword, CategoryId = categoryId };
+        Context.CategorizationRules.Add(rule);
+        await Context.SaveChangesAsync();
+        return rule;
     }
 }

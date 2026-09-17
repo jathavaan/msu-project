@@ -11,4 +11,6 @@ public sealed class Category
     public ICollection<Income> Incomes { get; init; } = [];
     public ICollection<Expense> Expenses { get; init; } = [];
     public Budget? Budget { get; init; }
+    public ICollection<Transaction> Transactions { get; init; } = [];
+    public ICollection<CategorizationRule> CategorizationRules { get; init; } = [];
 }
