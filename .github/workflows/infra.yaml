@@ -1,15 +1,41 @@
 name: Infrastructure
 
-# Mirrors build-and-test.yaml's role for application code: a pure reusable workflow with no
-# trigger of its own, called by pull-request.yaml — which gates the call on infra/** having
-# changed (or workflow_dispatch) — so `what-if` shares pull-request.yaml's concurrency group
-# instead of piling up its own parallel runs on repeated pushes to the same PR.
+# Mirrors build-and-test.yaml's role for application code: the single definition of "what would
+# this infra change actually do". `what-if` (plus a second, Complete-mode what-if that reports
+# resources missing from Bicep — see the "Detect resources not defined in Bicep" step below) runs
+# as a reusable workflow called by pull-request.yaml, which gates the call on infra/** having
+# changed (or workflow_dispatch) — so it shares pull-request.yaml's concurrency group instead of
+# piling up its own parallel runs on repeated pushes to the same PR. It's also directly
+# workflow_dispatch-able here, both to preview on demand and to run the opt-in prune-drift job
+# below.
 #
 # The actual apply lives in build-and-deploy.yaml as the infra-deploy job (still gated behind the
 # infra-production GitHub Environment), not here — that lets it sit ahead of the AKS deploy jobs in
 # the same run, so app code that depends on new infra never rolls out before that infra is applied.
+# That apply stays on the default Incremental mode: it only ever creates/updates what's in
+# main.bicep and never deletes a resource just because the resource is missing from the template.
+#
+# Deleting that drift for real is a separate, opt-in path: the prune-drift job below, triggered only
+# by workflow_dispatch with action: prune-drift, never by a PR or a merge to main. See that job for
+# why it's gated the way it is.
+#
+#   what-if      (every PR touching infra/**, and workflow_dispatch with action: preview)
+#   prune-drift  (workflow_dispatch with action: prune-drift, only)
 on:
   workflow_call:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "preview: read-only what-if (default). prune-drift: actually deletes resources missing from Bicep."
+        type: choice
+        options:
+          - preview
+          - prune-drift
+        default: preview
+      confirm:
+        description: "Only read for prune-drift: type the resource group name (rg-financeone-msu) exactly to proceed."
+        required: false
+        default: ""
 
 permissions:
   id-token: write
@@ -22,6 +48,10 @@ jobs:
   what-if:
     name: Preview (what-if)
     runs-on: ubuntu-latest
+    # Called via workflow_call (from pull-request.yaml, including its own workflow_dispatch, which
+    # defines no `action` input) always runs what-if. A direct workflow_dispatch on this file only
+    # skips it for an explicit action: prune-drift.
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.action != 'prune-drift'
     # A job-level `permissions:` block replaces the workflow-level one for that job rather than
     # adding to it, so id-token: write has to be repeated here too — omitting it is exactly what
     # broke azure/login the first time (it needs id-token: write to fetch the OIDC token at all).
@@ -56,18 +86,117 @@ jobs:
             echo 'WHATIF_EOF'
           } >> "$GITHUB_OUTPUT"
 
+      # `what-if` never applies anything, in any mode — passing --mode Complete only changes what
+      # it *reports*. Under Incremental (the mode the "Run what-if" step above uses, and the mode
+      # `infra-deploy` actually applies), a resource that exists in the resource group but isn't in
+      # main.bicep is simply ignored. Under Complete, the same resource shows up as a "Delete"
+      # change, which is what lets us detect it here without changing how the real deploy behaves.
+      - name: Detect resources not defined in Bicep (Complete-mode preview)
+        id: drift
+        run: |
+          az deployment group what-if \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file infra/main.bicep \
+            --parameters infra/main.parameters.json \
+            --mode Complete \
+            --no-pretty-print \
+            -o json > complete-what-if.json \
+            || echo '{}' > complete-what-if.json
+
+          # Microsoft.Authorization/roleAssignments is deliberately kept out of main.bicep (see
+          # infra/role-assignments.bicep and the Infrastructure section of CLAUDE.md) — it always
+          # shows up as "extra" here and isn't drift, so it's excluded from the report.
+          orphans=$(jq -r '
+            (.changes // .properties.changes // [])
+            | map(select(.changeType == "Delete"))
+            | map(select((.resourceId // "") | test("Microsoft.Authorization/roleAssignments"; "i") | not))
+            | .[].resourceId
+          ' complete-what-if.json)
+
+          {
+            echo 'orphans<<ORPHANS_EOF'
+            echo "$orphans"
+            echo 'ORPHANS_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+          if [ -n "$orphans" ]; then
+            {
+              echo "### ⚠️ Resources not defined in Bicep"
+              echo '```'
+              echo "$orphans"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Post what-if result to PR
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
           WHATIF_RESULT: ${{ steps.whatif.outputs.result }}
+          ORPHANS: ${{ steps.drift.outputs.orphans }}
         run: |
           {
             echo "### Infra what-if"
             echo '```'
             echo "$WHATIF_RESULT"
             echo '```'
+            if [ -n "$ORPHANS" ]; then
+              echo
+              echo "### ⚠️ Resources not defined in \`infra/main.bicep\`"
+              echo "These exist in \`rg-financeone-msu\` but aren't declared in Bicep. Incremental mode (what \`infra-deploy\` actually runs) leaves them alone, so nothing is deleted automatically — remove them by hand if they're no longer needed, or add them to \`main.bicep\` if they should be managed."
+              echo '```'
+              echo "$ORPHANS"
+              echo '```'
+            fi
           } > whatif-comment.md
           gh pr comment "${{ github.event.pull_request.number }}" \
             --body-file whatif-comment.md \
             --edit-last --create-if-none
+
+  # Fails fast on a mistaken or default-inputs trigger, before it ever reaches the infra-production
+  # approval gate below — an approver shouldn't have to spend a review click on a typo'd input.
+  validate-prune-request:
+    name: Validate prune-drift request
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'prune-drift'
+    steps:
+      - name: Require typed confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "${{ env.RESOURCE_GROUP }}" ]; then
+            echo "::error::Refusing to prune — the 'confirm' input must exactly match the resource group name (${{ env.RESOURCE_GROUP }}), and it was '${{ github.event.inputs.confirm }}'. Re-run workflow_dispatch with action: prune-drift and confirm: ${{ env.RESOURCE_GROUP }}."
+            exit 1
+          fi
+
+  # The one place in this repo that actually deletes Azure resources. Complete mode deletes any
+  # resource in the resource group that main.bicep doesn't declare — check the what-if job's
+  # "Resources not defined in Bicep" report BEFORE running this. The infra-production approval gate
+  # below fires before any step in this job runs, so the approver has no live diff to review at
+  # approval time; they have to have already checked the preview. Per Azure's deployment-mode
+  # semantics, Complete mode only deletes standard resource-group-level resources — it does not
+  # touch extension resources such as role assignments, locks, or policy assignments, so
+  # infra/role-assignments.bicep is unaffected without any extra filtering.
+  prune-drift:
+    name: Prune drift (delete resources missing from Bicep)
+    runs-on: ubuntu-latest
+    needs: validate-prune-request
+    environment: infra-production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Delete resources not defined in Bicep
+        run: |
+          az deployment group create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file infra/main.bicep \
+            --parameters infra/main.parameters.json \
+            --mode Complete
