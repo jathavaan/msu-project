@@ -115,29 +115,6 @@ module storageApp 'modules/storage-app.bicep' = {
   }
 }
 
-module storageFunctions 'modules/storage-functions.bicep' = {
-  name: 'storage-functions'
-  params: {
-    location: location
-  }
-}
-
-module communication 'modules/communication.bicep' = {
-  name: 'communication'
-}
-
-module functions 'modules/functions.bicep' = {
-  name: 'functions'
-  params: {
-    location: location
-    functionsStorageAccountName: storageFunctions.outputs.name
-    appInsightsConnectionString: appInsights.outputs.connectionString
-    uamiResourceId: identity.outputs.id
-    uamiClientId: identity.outputs.clientId
-    keyVaultUri: keyVault.outputs.vaultUri
-  }
-}
-
 module monitorAlerts 'modules/monitor-alerts.bicep' = {
   name: 'monitor-alerts'
   params: {
@@ -162,8 +139,6 @@ output acrLoginServer string = acr.outputs.loginServer
 output aksName string = aks.outputs.name
 output keyVaultUri string = keyVault.outputs.vaultUri
 output mysqlFqdn string = mysql.outputs.fullyQualifiedDomainName
-output functionAppName string = functions.outputs.name
-output acsName string = communication.outputs.acsName
 @description('Connection string of the workspace-based Application Insights resource — needed to populate the ApplicationInsights--ConnectionString Key Vault secret and the APPINSIGHTS_CONNECTION_STRING GitHub secret (see issue #50).')
 output appInsightsConnectionString string = appInsights.outputs.connectionString
 output dashboardName string = dashboard.outputs.name
