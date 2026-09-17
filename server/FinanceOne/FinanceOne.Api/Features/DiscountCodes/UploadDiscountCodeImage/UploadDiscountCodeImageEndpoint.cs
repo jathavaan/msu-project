@@ -12,7 +12,11 @@ public static class UploadDiscountCodeImageEndpoint
             return response.IsSuccess
                 ? Results.NoContent()
                 : Results.Problem(statusCode: response.ErrorCode, detail: response.ErrorMessage);
-        });
+        })
+        // Minimal APIs auto-require antiforgery validation for any endpoint binding an IFormFile,
+        // but this API has no antiforgery tokens/middleware anywhere (it's a stateless JSON API
+        // called from the SPA over fetch) — without this, every call 500s before reaching the handler.
+        .DisableAntiforgery();
 
         return group;
     }
