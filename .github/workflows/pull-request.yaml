@@ -19,7 +19,7 @@ concurrency:
 jobs:
   # `other` catches everything outside server/** and client/** (root files, .github/**, k8s/**,
   # infra/**, docs, ...) so an ambiguous change still runs both suites below rather than silently
-  # skipping everything.
+  # skipping everything. `infra` is only consumed by infra-what-if below.
   changes:
     runs-on: ubuntu-latest
     name: Detect changed paths
@@ -27,6 +27,7 @@ jobs:
       server: ${{ steps.filter.outputs.server }}
       client: ${{ steps.filter.outputs.client }}
       other: ${{ steps.filter.outputs.other }}
+      infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v4
 
@@ -43,6 +44,8 @@ jobs:
               - '**'
               - '!server/**'
               - '!client/**'
+            infra:
+              - 'infra/**'
 
   build-and-test:
     name: Build and test
@@ -60,3 +63,22 @@ jobs:
     with:
       run-server: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true' || needs.changes.outputs.other == 'true' }}
       run-client: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.client == 'true' || needs.changes.outputs.other == 'true' }}
+
+  # Converted from infra.yaml's own pull_request trigger so it shares this workflow's
+  # cancel-in-progress concurrency group instead of piling up stale runs on repeated pushes.
+  # workflow_dispatch has no diff to filter on, so it forces the call the same way
+  # build-and-deploy.yaml's changes-gated jobs force a run on manual dispatch.
+  infra-what-if:
+    name: Infra what-if
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.infra == 'true'
+    uses: ./.github/workflows/infra.yaml
+    # id-token:write is what azure/login needs to fetch the OIDC token; pull-requests:write is what
+    # posts the what-if result as a PR comment. Both capped here, same as checks:write above.
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    # The what-if job needs the AZURE_* secrets, and a reusable workflow in another file gets none
+    # of the caller's secrets unless explicitly passed.
+    secrets: inherit
