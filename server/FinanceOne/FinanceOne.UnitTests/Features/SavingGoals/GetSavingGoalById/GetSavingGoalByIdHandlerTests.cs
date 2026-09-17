@@ -34,6 +34,7 @@ public class GetSavingGoalByIdHandlerTests
             CurrentAmount = 80_000m,
             TargetDate = Today.AddDays(45),
             InterestRate = 4.5m,
+            ImageUrl = "/api/saving-goals/g1/image",
         });
         _repository.GetMonthlyContributionTotal(id, Arg.Any<CancellationToken>()).Returns(5_000m);
 
@@ -48,6 +49,7 @@ public class GetSavingGoalByIdHandlerTests
         Assert.Equal(45, vm.DaysRemaining);
         Assert.Equal(5_000m, vm.MonthlyContribution);
         Assert.Equal(4.5m, vm.InterestRate);
+        Assert.Equal("/api/saving-goals/g1/image", vm.ImageUrl);
     }
 
     // Matches GetSavingGoals: an overdue goal reads zero days left rather than a negative number.

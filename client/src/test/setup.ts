@@ -1,5 +1,6 @@
-// Must come first: it rewrites fetch/Request before MSW wraps them.
+// Must come first: they rewrite fetch/Request/File before MSW wraps them.
 import './abortSignalShim'
+import './fileShim'
 import '@testing-library/jest-dom/vitest'
 import { afterAll, afterEach, beforeAll } from 'vitest'
 import { cleanup } from '@testing-library/react'

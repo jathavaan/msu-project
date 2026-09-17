@@ -43,6 +43,13 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
         publicAccess: 'None'
       }
     }
+
+    resource savingGoalImages 'containers' = {
+      name: 'saving-goal-images'
+      properties: {
+        publicAccess: 'None'
+      }
+    }
   }
 }
 

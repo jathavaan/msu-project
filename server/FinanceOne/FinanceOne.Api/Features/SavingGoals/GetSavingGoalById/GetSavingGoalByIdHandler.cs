@@ -22,7 +22,8 @@ public sealed class GetSavingGoalByIdHandler(IGetSavingGoalByIdRepository reposi
             savingGoal.TargetAmount - savingGoal.CurrentAmount,
             Math.Max(0, savingGoal.TargetDate.DayNumber - today.DayNumber),
             monthlyContribution,
-            savingGoal.InterestRate);
+            savingGoal.InterestRate,
+            savingGoal.ImageUrl);
 
         return Response<SavingGoalVm>.Success(vm);
     }

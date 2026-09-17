@@ -1,12 +1,13 @@
+using FinanceOne.Api.Common.BlobStorage;
 using FinanceOne.Api.Features.SavingGoals.DeleteSavingGoal;
 using FinanceOne.IntegrationTests.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceOne.IntegrationTests.Features.SavingGoals.DeleteSavingGoal;
 
-public class DeleteSavingGoalTests(MySqlFixture fixture) : IntegrationTest(fixture)
+public class DeleteSavingGoalTests(MySqlFixture fixture, AzuriteFixture azuriteFixture) : IntegrationTest(fixture)
 {
-    private DeleteSavingGoalHandler Handler => new(new DeleteSavingGoalRepository(Context));
+    private DeleteSavingGoalHandler Handler => new(new DeleteSavingGoalRepository(Context), azuriteFixture.BlobStorageService);
 
     [Fact]
     public async Task Returns_404_When_The_Goal_Does_Not_Exist()
@@ -69,6 +70,30 @@ public class DeleteSavingGoalTests(MySqlFixture fixture) : IntegrationTest(fixtu
         await GivenMonthlySaving(holiday.Id, "Holiday Fund", 1_500m, 5);
 
         var response = await Handler.Handle(new DeleteSavingGoalCommand(car.Id), CancellationToken.None);
+
+        Assert.True(response.IsSuccess);
+    }
+
+    [Fact]
+    public async Task Deletes_The_Goals_Uploaded_Image_Too()
+    {
+        var goal = await GivenSavingGoal("New Car", 250_000m, new DateOnly(2027, 6, 15));
+        await azuriteFixture.BlobStorageService.UploadAsync(
+            BlobContainers.SavingGoalImages, goal.Id.ToString(), new MemoryStream([1]), "image/png", CancellationToken.None);
+
+        var response = await Handler.Handle(new DeleteSavingGoalCommand(goal.Id), CancellationToken.None);
+
+        Assert.True(response.IsSuccess);
+        Assert.Null(await azuriteFixture.BlobStorageService.DownloadAsync(
+            BlobContainers.SavingGoalImages, goal.Id.ToString(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Deleting_A_Goal_With_No_Image_Does_Not_Fail()
+    {
+        var goal = await GivenSavingGoal("New Car", 250_000m, new DateOnly(2027, 6, 15));
+
+        var response = await Handler.Handle(new DeleteSavingGoalCommand(goal.Id), CancellationToken.None);
 
         Assert.True(response.IsSuccess);
     }
