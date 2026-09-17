@@ -13,6 +13,7 @@ using FinanceOne.Api.Features.Expenses;
 using FinanceOne.Api.Features.Income;
 using FinanceOne.Api.Features.MonthlySavings;
 using FinanceOne.Api.Features.SavingGoals;
+using FinanceOne.Api.Features.SpendTrends;
 using FinanceOne.Api.Features.Transactions;
 using FinanceOne.Api.Features.UpcomingPayments;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -232,6 +233,8 @@ app.MapExpensesEndpoints();
 app.MapIncomeEndpoints();
 app.MapMonthlySavingsEndpoints();
 app.MapSavingGoalsEndpoints();
+// Disabled for now (kept, not removed) — see issue #49. Uncomment to re-enable.
+// app.MapSpendTrendsEndpoints();
 app.MapTransactionsEndpoints();
 app.MapUpcomingPaymentsEndpoints();
 

@@ -19,6 +19,8 @@ export const apiSlice = createApi({
     'DiscountCode',
     'UpcomingPayment',
     'BalanceForecast',
+    'Transaction',
+    'SpendTrend',
   ],
   endpoints: () => ({}),
 })
