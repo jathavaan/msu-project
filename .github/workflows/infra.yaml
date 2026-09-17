@@ -1,11 +1,13 @@
 name: Infrastructure
 
 # Mirrors build-and-test.yaml's role for application code: the single definition of "what would
-# this infra change actually do". `what-if` previews every PR touching infra/** so a bad template
-# edit is visible before merge, and is also available on demand via workflow_dispatch. A second
-# what-if, run in Complete mode, previews the opposite question — what exists in the resource group
-# that Bicep no longer knows about — without changing how anything actually gets deployed (see the
-# "Detect resources not defined in Bicep" step below).
+# this infra change actually do". `what-if` (plus a second, Complete-mode what-if that reports
+# resources missing from Bicep — see the "Detect resources not defined in Bicep" step below) runs
+# as a reusable workflow called by pull-request.yaml, which gates the call on infra/** having
+# changed (or workflow_dispatch) — so it shares pull-request.yaml's concurrency group instead of
+# piling up its own parallel runs on repeated pushes to the same PR. It's also directly
+# workflow_dispatch-able here, both to preview on demand and to run the opt-in prune-drift job
+# below.
 #
 # The actual apply lives in build-and-deploy.yaml as the infra-deploy job (still gated behind the
 # infra-production GitHub Environment), not here — that lets it sit ahead of the AKS deploy jobs in
@@ -20,6 +22,7 @@ name: Infrastructure
 #   what-if      (every PR touching infra/**, and workflow_dispatch with action: preview)
 #   prune-drift  (workflow_dispatch with action: prune-drift, only)
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       action:
@@ -33,9 +36,6 @@ on:
         description: "Only read for prune-drift: type the resource group name (rg-financeone-msu) exactly to proceed."
         required: false
         default: ""
-  pull_request:
-    branches: [ "main" ]
-    paths: [ "infra/**" ]
 
 permissions:
   id-token: write
@@ -48,7 +48,10 @@ jobs:
   what-if:
     name: Preview (what-if)
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.action == 'preview'
+    # Called via workflow_call (from pull-request.yaml, including its own workflow_dispatch, which
+    # defines no `action` input) always runs what-if. A direct workflow_dispatch on this file only
+    # skips it for an explicit action: prune-drift.
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.action != 'prune-drift'
     # A job-level `permissions:` block replaces the workflow-level one for that job rather than
     # adding to it, so id-token: write has to be repeated here too — omitting it is exactly what
     # broke azure/login the first time (it needs id-token: write to fetch the OIDC token at all).

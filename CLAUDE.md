@@ -54,18 +54,19 @@ missing, the usual cause is the test step dying before writing its file at all.
 shared gate, and both wait on `infra-deploy` before actually rolling out:
 
 ```
-changes ─┬────────────────────────────────────────────────────────────┐
-         │                                                            │
-         ├→ infra-deploy ─────────────────────────────────────────────┤
-         │                                                            │
-test ────┼→ build-and-push-server → deploy-server (needs infra-deploy)│  (migrations, then rollout)
-         └→ build-and-push-client → deploy-client (needs infra-deploy)│
+          ┌→ infra-deploy ───────────────────────────────────┐
+changes ──┤                                                  │
+          └→ test ─┬→ build-and-push-server → deploy-server ─┤
+                    └→ build-and-push-client → deploy-client ─┘
 ```
 
 `test` calls the same `build-and-test.yaml` the PR workflow does and has **no** path filter, so
 both the frontend and the backend suites must pass before *either* chain pushes an image — a
-client-only change still has to keep the backend green. `changes` (path filters) decides which
-chains run at all; a `workflow_dispatch` run forces all three.
+client-only change still has to keep the backend green. It `needs: changes` purely so the run
+graph reads detect-then-act; `changes`'s outputs don't gate whether `test` runs, only what runs
+after it — `infra-deploy`, `build-and-push-server`, and `build-and-push-client` are the jobs
+actually skipped per-service when their path filter doesn't match. A `workflow_dispatch` run
+forces all three of those regardless of what changed.
 
 `infra-deploy` runs the real Bicep apply (see Infrastructure below) ahead of the AKS deploy jobs, so
 app code that depends on new infra never rolls out before that infra exists. `deploy-server` and
@@ -89,8 +90,12 @@ should be close to a no-op. New modules (Log Analytics, App Insights, Monitor al
 Storage accounts, the Function App, Communication Services) provision resources that didn't exist
 before this template.
 
-`.github/workflows/infra.yaml` runs `az deployment group what-if` on every PR touching `infra/**`
-and posts the result as a PR comment. The real `az deployment group create` runs as the
+`.github/workflows/infra.yaml` is a reusable workflow (`on: workflow_call`, same shape as
+`build-and-test.yaml`) that runs `az deployment group what-if` and posts the result as a PR
+comment. `pull-request.yaml` calls it, gated on a `changes` job so it only runs when a PR touches
+`infra/**` (or on `workflow_dispatch`) — that keeps it inside `pull-request.yaml`'s
+cancel-in-progress concurrency group instead of piling up its own parallel runs on repeated pushes.
+The real `az deployment group create` runs as the
 `infra-deploy` job in `build-and-deploy.yaml` instead (see CD above) — that's what lets it be
 sequenced ahead of the AKS deploy jobs in the same run. It's still gated behind the
 `infra-production` GitHub Environment, so an apply always needs a manual approval click even though
