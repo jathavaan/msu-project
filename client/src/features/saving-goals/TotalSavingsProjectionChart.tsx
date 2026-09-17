@@ -7,8 +7,12 @@ import { useGetSavingGoalsProjectionQuery } from './api'
 // Rounded gridline values on a savings chart don't need cents.
 const axisCurrencyFormatter = new Intl.NumberFormat('nb-NO', { style: 'currency', currency: 'NOK', maximumFractionDigits: 0 })
 
-export function TotalSavingsProjectionChart() {
-  const { data: points, isLoading } = useGetSavingGoalsProjectionQuery({})
+interface TotalSavingsProjectionChartProps {
+  years: number
+}
+
+export function TotalSavingsProjectionChart({ years }: TotalSavingsProjectionChartProps) {
+  const { data: points, isLoading } = useGetSavingGoalsProjectionQuery({ years })
 
   if (isLoading) {
     return <Spinner />

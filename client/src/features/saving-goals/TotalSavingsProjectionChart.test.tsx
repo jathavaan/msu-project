@@ -17,7 +17,7 @@ describe('TotalSavingsProjectionChart', () => {
       { month: 0, date: '2026-06-15', totalBalance: 15_000 },
       { month: 1, date: '2026-07-15', totalBalance: 16_500 },
     ])
-    const { container } = renderWithStore(<TotalSavingsProjectionChart />)
+    const { container } = renderWithStore(<TotalSavingsProjectionChart years={5} />)
 
     await waitFor(() => expect(container.querySelector('.recharts-responsive-container')).toBeInTheDocument())
   })
@@ -26,8 +26,26 @@ describe('TotalSavingsProjectionChart', () => {
   // but the component must not blow up recharts by handing it an empty dataset.
   it('renders nothing for an empty points array', async () => {
     stubProjection([])
-    const { container } = renderWithStore(<TotalSavingsProjectionChart />)
+    const { container } = renderWithStore(<TotalSavingsProjectionChart years={5} />)
 
     await waitFor(() => expect(container).toBeEmptyDOMElement())
+  })
+
+  it('requests the projection for the given horizon', async () => {
+    let requestedYears: string | null = null
+    server.use(
+      http.get(`${API_URL}/saving-goals/projection`, ({ request }) => {
+        requestedYears = new URL(request.url).searchParams.get('years')
+        return HttpResponse.json({
+          result: [{ month: 0, date: '2026-06-15', totalBalance: 15_000 }],
+          errorCode: null,
+          errorMessage: null,
+        })
+      }),
+    )
+    const { container } = renderWithStore(<TotalSavingsProjectionChart years={20} />)
+
+    await waitFor(() => expect(container.querySelector('.recharts-responsive-container')).toBeInTheDocument())
+    expect(requestedYears).toBe('20')
   })
 })

@@ -10,6 +10,7 @@ import {
   Ticket,
   CalendarClock,
   CircleDollarSign,
+  Settings,
   X,
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { to: '/upcoming-payments', label: 'Upcoming Payments', icon: CalendarClock },
   { to: '/discount-codes', label: 'Discount Codes', icon: Ticket },
   { to: '/categories', label: 'Categories', icon: Tags },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
 interface SidebarProps {

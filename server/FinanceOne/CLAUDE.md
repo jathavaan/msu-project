@@ -503,8 +503,8 @@ collation behaviour.
   slice's `README.md` (404/409/etc.).
 
 Every implemented feature group is covered: `Budgets`, `Categories`, `Expenses`, `Income`,
-`SavingGoals`, `MonthlySavings`, `DiscountCodes` and `UpcomingPayments`. `BalanceForecast` has only
-a `README.md` and no implementation, so it has no tests yet — add them with the slice.
+`SavingGoals`, `MonthlySavings`, `DiscountCodes`, `UpcomingPayments`, `BalanceForecast` and
+`Settings`.
 
 Not covered yet: the HTTP layer itself (routing, `ValidationFilter`, the `Results.Problem` mapping).
 Those would need a `WebApplicationFactory`, which today would boot the dev seeder or demand Key

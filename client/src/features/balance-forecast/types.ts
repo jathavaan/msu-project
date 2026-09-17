@@ -11,4 +11,5 @@ export interface BalanceForecastPoint {
   balance: number
   incomes: BalanceEntry[]
   expenses: BalanceEntry[]
+  savings: BalanceEntry[]
 }
