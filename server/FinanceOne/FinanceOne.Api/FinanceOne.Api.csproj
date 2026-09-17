@@ -45,6 +45,7 @@
       <Folder Include="Features\Income\" />
       <Folder Include="Features\MonthlySavings\" />
       <Folder Include="Features\SavingGoals\" />
+      <Folder Include="Features\Settings\" />
       <Folder Include="Features\Transactions\" />
       <Folder Include="Features\UpcomingPayments\" />
     </ItemGroup>

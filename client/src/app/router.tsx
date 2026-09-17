@@ -9,6 +9,7 @@ import { SavingGoalsPage } from '../features/saving-goals/SavingGoalsPage'
 import { MonthlySavingsPage } from '../features/monthly-savings/MonthlySavingsPage'
 import { DiscountCodesPage } from '../features/discount-codes/DiscountCodesPage'
 import { UpcomingPaymentsPage } from '../features/upcoming-payments/UpcomingPaymentsPage'
+import { SettingsPage } from '../features/settings/SettingsPage'
 
 export const router = createBrowserRouter([
   {
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
       { path: 'discount-codes', element: <DiscountCodesPage /> },
       { path: 'upcoming-payments', element: <UpcomingPaymentsPage /> },
       { path: 'categories', element: <CategoriesPage /> },
+      { path: 'settings', element: <SettingsPage /> },
     ],
   },
 ])

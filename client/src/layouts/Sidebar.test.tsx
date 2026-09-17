@@ -19,6 +19,7 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /income/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /categories/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument()
   })
 
   it('is translated off-screen when closed and on-screen when open', () => {

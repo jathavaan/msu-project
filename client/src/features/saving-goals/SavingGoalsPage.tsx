@@ -7,17 +7,26 @@ import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { QueryState } from '../../components/QueryState'
 import { EmptyState } from '../../components/EmptyState'
 import { Card } from '../../components/Card'
+import { Select } from '../../components/Select'
 import { SavingGoalCard } from './SavingGoalCard'
 import { SavingGoalForm } from './SavingGoalForm'
 import { TotalSavingsProjectionChart } from './TotalSavingsProjectionChart'
 import { useDeleteSavingGoalMutation, useGetSavingGoalsQuery } from './api'
 import type { SavingGoal } from './types'
 
+const HORIZON_OPTIONS = [
+  { value: '1', label: 'Next 1 year' },
+  { value: '5', label: 'Next 5 years' },
+  { value: '10', label: 'Next 10 years' },
+  { value: '20', label: 'Next 20 years' },
+]
+
 export function SavingGoalsPage() {
   const { data: savingGoals, isLoading, error } = useGetSavingGoalsQuery()
   const [deleteSavingGoal] = useDeleteSavingGoalMutation()
   const [editing, setEditing] = useState<SavingGoal | 'new' | null>(null)
   const [deleting, setDeleting] = useState<SavingGoal | null>(null)
+  const [horizon, setHorizon] = useState('5')
 
   function handleConfirmDelete() {
     if (deleting) void deleteSavingGoal(deleting.id)
@@ -49,8 +58,13 @@ export function SavingGoalsPage() {
         }
       >
         <div className="mb-6">
-          <Card title="Total Projected Savings" actions={<span className="text-xs text-ink-muted">Next 5 years, across all goals</span>}>
-            <TotalSavingsProjectionChart />
+          <Card
+            title="Total Projected Savings"
+            actions={
+              <Select label="Horizon" value={horizon} onChange={(event) => setHorizon(event.target.value)} options={HORIZON_OPTIONS} className="w-40" />
+            }
+          >
+            <TotalSavingsProjectionChart years={Number(horizon)} />
           </Card>
         </div>
 

@@ -35,7 +35,7 @@ function BalanceTooltip({ active, payload }: TooltipContentProps) {
     return null
   }
 
-  const hasEntries = point.incomes.length > 0 || point.expenses.length > 0
+  const hasEntries = point.incomes.length > 0 || point.expenses.length > 0 || point.savings.length > 0
 
   return (
     <div className="min-w-56 rounded-lg border border-border bg-surface p-3 text-xs shadow-md">
@@ -43,7 +43,7 @@ function BalanceTooltip({ active, payload }: TooltipContentProps) {
         <span className="font-semibold text-ink">Day {point.day}</span>
         <span className="font-semibold text-ink">{formatCurrency(point.balance)}</span>
       </div>
-      {!hasEntries && <p className="text-ink-muted">No income or expenses this day.</p>}
+      {!hasEntries && <p className="text-ink-muted">No income, expenses, or savings this day.</p>}
       {point.incomes.length > 0 && (
         <div className="mb-1.5 space-y-0.5">
           <p className="font-medium text-positive">Income</p>
@@ -53,9 +53,17 @@ function BalanceTooltip({ active, payload }: TooltipContentProps) {
         </div>
       )}
       {point.expenses.length > 0 && (
-        <div className="space-y-0.5">
+        <div className="mb-1.5 space-y-0.5">
           <p className="font-medium text-negative">Expenses</p>
           {point.expenses.map((entry) => (
+            <EntryRow key={entry.name} entry={entry} />
+          ))}
+        </div>
+      )}
+      {point.savings.length > 0 && (
+        <div className="space-y-0.5">
+          <p className="font-medium text-negative">Savings</p>
+          {point.savings.map((entry) => (
             <EntryRow key={entry.name} entry={entry} />
           ))}
         </div>
@@ -72,7 +80,7 @@ export function BalanceOverTimeChart() {
   }
 
   if (!points || points.length === 0) {
-    return <p className="py-16 text-center text-sm text-ink-muted">No recurring income or expenses yet.</p>
+    return <p className="py-16 text-center text-sm text-ink-muted">No recurring income, expenses, or savings yet.</p>
   }
 
   const balances = points.map((point) => point.balance)
@@ -100,7 +108,7 @@ export function BalanceOverTimeChart() {
           tickLine={false}
           axisLine={false}
           tick={{ fill: '#6b7280', fontSize: 12 }}
-          label={{ value: 'Day of period', position: 'insideBottom', offset: -4, fontSize: 11, fill: '#6b7280' }}
+          label={{ value: 'Day of month', position: 'insideBottom', offset: -4, fontSize: 11, fill: '#6b7280' }}
         />
         <YAxis
           domain={[yMin, yMax]}

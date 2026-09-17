@@ -33,7 +33,7 @@ public abstract class IntegrationTest : IAsyncLifetime
         // SavingGoal is Restrict, so the reverse order would be rejected.
         foreach (var table in (string[])
                  ["Budgets", "Expenses", "Incomes", "MonthlySavings", "SavingGoals", "DiscountCodes",
-                     "Transactions", "CategorizationRules", "Categories"])
+                     "Transactions", "CategorizationRules", "Categories", "AppSettings"])
         {
             await Context.Database.ExecuteSqlRawAsync($"DELETE FROM `{table}`");
         }
@@ -173,5 +173,13 @@ public abstract class IntegrationTest : IAsyncLifetime
         Context.CategorizationRules.Add(rule);
         await Context.SaveChangesAsync();
         return rule;
+    }
+
+    protected async Task<AppSettings> GivenAppSettings(int periodStartDay)
+    {
+        var settings = new AppSettings { Id = Guid.NewGuid(), PeriodStartDay = periodStartDay };
+        Context.AppSettings.Add(settings);
+        await Context.SaveChangesAsync();
+        return settings;
     }
 }

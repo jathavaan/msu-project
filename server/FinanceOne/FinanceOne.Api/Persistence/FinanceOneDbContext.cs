@@ -8,6 +8,7 @@ namespace FinanceOne.Api.Persistence;
 public sealed class FinanceOneDbContext(DbContextOptions<FinanceOneDbContext> options)
     : DbContext(options)
 {
+    public DbSet<AppSettings> AppSettings => Set<AppSettings>();
     public DbSet<Budget> Budgets => Set<Budget>();
     public DbSet<CategorizationRule> CategorizationRules => Set<CategorizationRule>();
     public DbSet<Category> Categories => Set<Category>();

@@ -59,4 +59,38 @@ public class GetBalanceForecastTests(MySqlFixture fixture) : IntegrationTest(fix
 
         Assert.Equal(399.50m, Assert.Single(response.Result![15].Expenses).Amount);
     }
+
+    [Fact]
+    public async Task Monthly_Savings_Dip_The_Balance_And_Carry_The_Saving_Goal_Name_Through_Its_Own_Join()
+    {
+        var savingGoal = await GivenSavingGoal("Buffer", 75_000m, new DateOnly(2027, 1, 1));
+        await GivenMonthlySaving(savingGoal.Id, "Buffer account", 4_000m, 26);
+
+        var response = await Handler.Handle(new GetBalanceForecastQuery(), CancellationToken.None);
+
+        var totalNet = -4_000m;
+        Assert.Equal(totalNet, response.Result![0].Balance);
+        var day26 = response.Result![25];
+        Assert.Equal(totalNet - 4_000m, day26.Balance);
+        var entry = Assert.Single(day26.Savings);
+        Assert.Equal("Buffer account", entry.Name);
+        Assert.Equal("Buffer", entry.CategoryName);
+    }
+
+    [Fact]
+    public async Task Walks_From_The_Configured_Period_Start_Day_Instead_Of_Day_One()
+    {
+        await GivenAppSettings(periodStartDay: 25);
+        var salaryCategory = await GivenCategory("Salary", CategoryType.Income);
+        await GivenIncome(salaryCategory.Id, "Monthly Salary", 45_000m, 25);
+
+        var response = await Handler.Handle(new GetBalanceForecastQuery(), CancellationToken.None);
+
+        List<int> expectedDays = [25, 26, 27, 28, .. Enumerable.Range(1, 24)];
+        Assert.Equal(expectedDays, response.Result!.Select(p => p.Day));
+        // Day 25 is the first point in the walk, so the salary lands immediately — on top of the
+        // rolled-over totalNet, which already includes this same salary once, so the balance
+        // becomes 2 * totalNet.
+        Assert.Equal(90_000m, response.Result![0].Balance);
+    }
 }
