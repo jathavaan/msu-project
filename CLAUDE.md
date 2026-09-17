@@ -25,6 +25,14 @@ client). Both `pull-request.yaml` (on every PR) and `build-and-deploy.yaml` (bef
 to ACR) call it, so merge gates and deploy gates are the same checks by construction. Add a new
 kind of check there, not to either caller.
 
+It takes two boolean inputs, `run-server` and `run-client`, both defaulting to `true`. Only
+`pull-request.yaml` passes them — computed from a `changes` job (`dorny/paths-filter` on
+`server/**` / `client/**`, plus a catch-all `other` filter for anything outside both that forces
+both suites, same as `workflow_dispatch`) — so a PR touching only one side skips the other side's
+build+test jobs for faster feedback. `build-and-deploy.yaml` never passes them, so its call keeps
+getting the full suite unconditionally on every push to `main` — a client-only push still has to
+keep the backend green before shipping.
+
 Each test job publishes its results through `dorny/test-reporter`, so a failing test shows up as a
 named check run with the assertion message annotated onto the diff rather than only as a red X.
 That needs `checks: write`, which each caller grants **on the job that calls the workflow** — never

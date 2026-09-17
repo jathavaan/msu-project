@@ -17,11 +17,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # `other` catches everything outside server/** and client/** (root files, .github/**, k8s/**,
+  # infra/**, docs, ...) so an ambiguous change still runs both suites below rather than silently
+  # skipping everything.
+  changes:
+    runs-on: ubuntu-latest
+    name: Detect changed paths
+    outputs:
+      server: ${{ steps.filter.outputs.server }}
+      client: ${{ steps.filter.outputs.client }}
+      other: ${{ steps.filter.outputs.other }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            server:
+              - 'server/**'
+            client:
+              - 'client/**'
+            other:
+              - '**'
+              - '!server/**'
+              - '!client/**'
+
   build-and-test:
     name: Build and test
+    needs: changes
     uses: ./.github/workflows/build-and-test.yaml
     # checks:write lets the test jobs publish their results as a check run with per-failure
     # annotations on the diff. A called workflow can never hold more than its caller grants here.
     permissions:
       contents: read
       checks: write
+    # Skip a side's build+test jobs only when this PR's changes are confined to the other side —
+    # any change outside both server/** and client/** (`other`) forces both, same as
+    # workflow_dispatch, since it has no diff to filter on. build-and-deploy.yaml's call passes
+    # neither input, so its full suite is unaffected by any of this.
+    with:
+      run-server: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.server == 'true' || needs.changes.outputs.other == 'true' }}
+      run-client: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.client == 'true' || needs.changes.outputs.other == 'true' }}
