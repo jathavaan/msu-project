@@ -89,8 +89,12 @@ should be close to a no-op. New modules (Log Analytics, App Insights, Monitor al
 Storage accounts, the Function App, Communication Services) provision resources that didn't exist
 before this template.
 
-`.github/workflows/infra.yaml` runs `az deployment group what-if` on every PR touching `infra/**`
-and posts the result as a PR comment. The real `az deployment group create` runs as the
+`.github/workflows/infra.yaml` is a reusable workflow (`on: workflow_call`, same shape as
+`build-and-test.yaml`) that runs `az deployment group what-if` and posts the result as a PR
+comment. `pull-request.yaml` calls it, gated on a `changes` job so it only runs when a PR touches
+`infra/**` (or on `workflow_dispatch`) — that keeps it inside `pull-request.yaml`'s
+cancel-in-progress concurrency group instead of piling up its own parallel runs on repeated pushes.
+The real `az deployment group create` runs as the
 `infra-deploy` job in `build-and-deploy.yaml` instead (see CD above) — that's what lets it be
 sequenced ahead of the AKS deploy jobs in the same run. It's still gated behind the
 `infra-production` GitHub Environment, so an apply always needs a manual approval click even though

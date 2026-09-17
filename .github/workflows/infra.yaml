@@ -1,19 +1,15 @@
 name: Infrastructure
 
-# Mirrors build-and-test.yaml's role for application code: the single definition of "what would
-# this infra change actually do". `what-if` previews every PR touching infra/** so a bad template
-# edit is visible before merge, and is also available on demand via workflow_dispatch.
+# Mirrors build-and-test.yaml's role for application code: a pure reusable workflow with no
+# trigger of its own, called by pull-request.yaml — which gates the call on infra/** having
+# changed (or workflow_dispatch) — so `what-if` shares pull-request.yaml's concurrency group
+# instead of piling up its own parallel runs on repeated pushes to the same PR.
 #
 # The actual apply lives in build-and-deploy.yaml as the infra-deploy job (still gated behind the
 # infra-production GitHub Environment), not here — that lets it sit ahead of the AKS deploy jobs in
 # the same run, so app code that depends on new infra never rolls out before that infra is applied.
-#
-#   what-if  (every PR touching infra/**, and workflow_dispatch)
 on:
-  workflow_dispatch:
-  pull_request:
-    branches: [ "main" ]
-    paths: [ "infra/**" ]
+  workflow_call:
 
 permissions:
   id-token: write
