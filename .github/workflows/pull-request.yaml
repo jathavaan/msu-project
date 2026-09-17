@@ -17,6 +17,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Only what-if needs this — build-and-test always runs unconditionally — so the filter is scoped
+  # to infra/** rather than mirroring build-and-deploy.yaml's server/client/infra split.
+  changes:
+    runs-on: ubuntu-latest
+    name: Detect changed paths
+    outputs:
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            infra:
+              - 'infra/**'
+
   build-and-test:
     name: Build and test
     uses: ./.github/workflows/build-and-test.yaml
@@ -25,3 +43,22 @@ jobs:
     permissions:
       contents: read
       checks: write
+
+  # Converted from infra.yaml's own pull_request trigger so it shares this workflow's
+  # cancel-in-progress concurrency group instead of piling up stale runs on repeated pushes.
+  # workflow_dispatch has no diff to filter on, so it forces the call the same way
+  # build-and-deploy.yaml's changes-gated jobs force a run on manual dispatch.
+  infra-what-if:
+    name: Infra what-if
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.infra == 'true'
+    uses: ./.github/workflows/infra.yaml
+    # id-token:write is what azure/login needs to fetch the OIDC token; pull-requests:write is what
+    # posts the what-if result as a PR comment. Both capped here, same as checks:write above.
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    # The what-if job needs the AZURE_* secrets, and a reusable workflow in another file gets none
+    # of the caller's secrets unless explicitly passed.
+    secrets: inherit
